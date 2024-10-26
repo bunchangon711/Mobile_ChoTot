@@ -1,0 +1,21 @@
+import { FC } from "react";
+import { LatestProduct } from "./LatestProductList";
+import GridView from "@ui/GridView";
+import ProductCard from "@ui/ProductCard";
+import React from "react";
+
+interface Props {
+  data: LatestProduct[];
+  onPress(item: LatestProduct): void;
+}
+
+const ProductGridView: FC<Props> = ({ data, onPress }) => {
+  return (
+    <GridView
+      data={data}
+      renderItem={(item) => <ProductCard product={item} onPress={onPress} />}
+    />
+  );
+};
+
+export default ProductGridView;
