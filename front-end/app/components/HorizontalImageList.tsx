@@ -15,6 +15,7 @@ interface Props {
   onPress?(item: string): void;
   onLongPress?(item: string): void;
   style?: StyleProp<ViewStyle>;
+  renderIcon?(): React.ReactNode;
 }
 
 const HorizontalImageList: FC<Props> = ({
@@ -22,6 +23,7 @@ const HorizontalImageList: FC<Props> = ({
   style,
   onPress,
   onLongPress,
+  renderIcon
 }) => {
   return (
     <FlatList
@@ -34,6 +36,7 @@ const HorizontalImageList: FC<Props> = ({
             style={styles.listItem}
           >
             <Image style={styles.image} source={{ uri: item }} />
+            {renderIcon && renderIcon()}
           </Pressable>
         );
       }}

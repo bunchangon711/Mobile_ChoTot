@@ -1,16 +1,22 @@
 import { FC } from "react";
-import { View, StyleSheet, Text } from "react-native";
+import { StyleSheet, Text, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import colors from "@utils/colors";
 import React from "react";
-interface Props {}
+import { useNavigation } from "@react-navigation/native";
 
-const BackButton: FC<Props> = (props) => {
+interface Props {
+  onPress?: () => void;
+}
+
+const BackButton: FC<Props> = ({ onPress }) => {
+  const { goBack } = useNavigation();
+  
   return (
-    <View style={styles.container}>
+    <Pressable style={styles.container} onPress={onPress || goBack}>
       <Ionicons name="chevron-back" size={18} color={colors.active} />
-      <Text style={styles.title}>Go Back</Text>
-    </View>
+      <Text style={styles.title}>Back</Text>
+    </Pressable>
   );
 };
 

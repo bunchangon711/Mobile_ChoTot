@@ -59,6 +59,11 @@ const SingleProduct: FC<Props> = ({ route, navigation }) => {
     }
   };
 
+  const onEditPress = () => {
+    if (!productInfo) return;
+    navigation.navigate("EditProduct", { product: productInfo });
+  };
+
   const onDeletePress = () => {
     Alert.alert(
       "Are you sure?",
@@ -131,7 +136,7 @@ const SingleProduct: FC<Props> = ({ route, navigation }) => {
             onDeletePress();
           }
           if (option.name === "Edit") {
-            navigation.navigate("EditProduct", { product: product! });
+            onEditPress();
           }
         }}
       />

@@ -157,13 +157,14 @@ const styles = StyleSheet.create({
   },
   searchBarContainer: {
     flex: 1,
-    marginRight: 10, // Use hard-coded margin value or localSize.margin if needed
+    marginLeft: 10,
+    marginRight: 10, 
   },
   chatNotification: {
     flexShrink: 0,
   },
   paddedSection: {
-    padding: 10, // Apply padding only to CategoryList and LatestProductList
+    padding: 10, 
   },
 });
 

@@ -102,25 +102,25 @@ Upload and update images (restrict image qty).
 And send the response back.
     */
 
-  const { name, price, category, description, purchasingDate, thumbnail } =
-    req.body;
+  const { name, price, category, description, purchasingDate, thumbnail } = req.body;
   const productId = req.params.id;
+
   if (!isValidObjectId(productId))
     return sendErrorRes(res, "Invalid product id!", 422);
 
   const product = await ProductModel.findOneAndUpdate(
     { _id: productId, owner: req.user.id },
     {
-      // name,
-      // price,
-      // category,
-      // description,
-      // purchasingDate,
+      name,
+      price,
+      category, 
+      description,
+      purchasingDate,
+      thumbnail
     },
-    {
-      new: true,
-    }
+    { new: true }
   );
+  
   if (!product) return sendErrorRes(res, "Product not found!", 404);
 
   if (typeof thumbnail === "string") product.thumbnail = thumbnail;
@@ -309,17 +309,26 @@ export const getProductsByCategory: RequestHandler = async (req, res) => {
     return sendErrorRes(res, "Invalid category!", 422);
 
   const products = await ProductModel.find({ category })
+    .populate<{ owner: UserDocument }>("owner", "name avatar")
     .sort("-createdAt")
     .skip((+pageNo - 1) * +limit)
     .limit(+limit);
 
   const listings = products.map((p) => {
+    const owner = p.owner as UserDocument;
     return {
       id: p._id,
       name: p.name,
       thumbnail: p.thumbnail,
+      image: p.images?.map((i) => i.url),
       category: p.category,
       price: p.price,
+      description: p.description,
+      seller: {
+        id: owner._id,
+        name: owner?.name || "Unknown Seller",
+        avatar: owner?.avatar
+      },
     };
   });
 
@@ -327,26 +336,30 @@ export const getProductsByCategory: RequestHandler = async (req, res) => {
 };
 
 export const getLatestProducts: RequestHandler = async (req, res) => {
-  /*
-1. User must be authenticated (optional).
-2. Find all the products with sorted date (apply limit/pagination if needed).
-3. Format data.
-4. And send the response back.
-    */
+  const products = await ProductModel.find()
+    .populate<{ owner: UserDocument }>("owner", "name avatar")
+    .sort("-createdAt")
+    .limit(10);
 
-  const products = await ProductModel.find().sort("-createdAt").limit(10);
-
-  const listings = products.map((p) => {
-    return {
-      id: p._id,
-      name: p.name,
-      thumbnail: p.thumbnail,
-      category: p.category,
-      price: p.price,
-    };
-  });
-
-  res.json({ products: listings });
+    const listings = products.map((p) => {
+      const owner = p.owner as UserDocument;
+      return {
+        id: p._id,
+        name: p.name,
+        thumbnail: p.thumbnail,
+        image: p.images?.map((i) => i.url),
+        category: p.category,
+        price: p.price,
+        description: p.description,
+        seller: {
+          id: owner._id,
+          name: owner?.name || "Unknown Seller",
+          avatar: owner?.avatar
+        }
+      };
+    });
+  
+    res.json({ products: listings });
 };
 
 export const getListings: RequestHandler = async (req, res) => {
@@ -389,19 +402,35 @@ export const getListings: RequestHandler = async (req, res) => {
 };
 
 export const searchProducts: RequestHandler = async (req, res) => {
-  const { name } = req.query;
-
+  const { query, category } = req.query;
   const filter: FilterQuery<ProductDocument> = {};
 
-  if (typeof name === "string") filter.name = { $regex: new RegExp(name, "i") };
+  if (category) filter.category = category;
+  if (typeof query === "string") {
+    filter.$or = [
+      { name: { $regex: new RegExp(query, "i") } },
+      { description: { $regex: new RegExp(query, "i") } }
+    ];
+  }
 
-  const products = await ProductModel.find(filter).limit(50);
+  const products = await ProductModel.find(filter)
+    .populate<{ owner: UserDocument }>("owner", "name avatar")
+    .limit(50);
 
-  res.json({
-    results: products.map((product) => ({
-      id: product._id,
-      name: product.name,
-      thumbnail: product.thumbnail,
-    })),
-  });
+  const formattedProducts = products.map(p => ({
+    id: p._id,
+    name: p.name,
+    thumbnail: p.thumbnail,
+    image: p.images?.map(i => i.url),
+    category: p.category,
+    price: p.price,
+    description: p.description,
+    seller: {
+      id: p.owner._id,
+      name: p.owner.name || "Unknown Seller",
+      avatar: p.owner.avatar
+    }
+  }));
+
+  res.json({ products: formattedProducts });
 };

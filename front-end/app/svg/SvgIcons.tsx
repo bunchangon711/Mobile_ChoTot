@@ -1,4 +1,6 @@
-import Svg, { G, Path, Defs, ClipPath, Circle } from "react-native-svg";
+import * as React from 'react';
+
+import { Svg, G, Path, Defs, ClipPath, Circle } from "react-native-svg";
 
 const Automobile = () => {
   return (
