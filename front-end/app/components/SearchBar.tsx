@@ -5,14 +5,20 @@ import colors from "@utils/colors";
 import size from "@utils/size";
 import React from "react";
 
-const SearchBar: FC = () => {
+interface Props {
+  placeholder?: string;
+  onSearch?: (text: string) => void;
+}
+
+const SearchBar: FC<Props> = ({ placeholder = "Tìm kiếm trên Chợ Tốt", onSearch }) => {
   return (
     <View style={styles.container}>
       <MaterialCommunityIcons name="magnify" size={24} color={colors.grey} />
       <TextInput
         style={styles.input}
-        placeholder="Tìm kiếm trên Chợ Tốt"
+        placeholder={placeholder}
         placeholderTextColor={colors.grey}
+        onChangeText={onSearch}
       />
     </View>
   );
@@ -25,8 +31,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: size.padding,
     paddingVertical: 8,
-    marginHorizontal: size.margin,
-    backgroundColor: "#F3F3F3", 
+    backgroundColor: "#F3F3F3",
   },
   input: {
     marginLeft: 10,

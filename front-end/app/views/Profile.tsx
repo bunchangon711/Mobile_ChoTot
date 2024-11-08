@@ -25,6 +25,9 @@ import { updateAuthState } from "app/store/auth";
 import { showMessage } from "react-native-flash-message";
 import { getUnreadChatsCount } from "app/store/chats";
 import React from "react";
+import * as ImagePicker from 'expo-image-picker';
+import { MaterialIcons } from "@expo/vector-icons";
+
 interface Props {}
 
 const Profile: FC<Props> = (props) => {
@@ -93,6 +96,42 @@ const Profile: FC<Props> = (props) => {
     }
   };
 
+  const updateAvatar = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+
+    if (!result.canceled) {
+      const formData = new FormData();
+      formData.append('avatar', {
+        uri: result.assets[0].uri,
+        type: 'image/jpeg',
+        name: 'avatar.jpg',
+      } as any);
+
+      const res = await runAxiosAsync<{ profile: ProfileRes }>(
+        authClient.patch("/auth/update-avatar", formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        })
+      );
+
+      if (res) {
+        dispatch(
+          updateAuthState({
+            pending: false,
+            profile: { ...profile!, ...res.profile },
+          })
+        );
+        showMessage({ message: "Avatar updated successfully", type: "success" });
+      }
+    }
+  };
+
   return (
     <ScrollView
       refreshControl={
@@ -116,15 +155,25 @@ const Profile: FC<Props> = (props) => {
       )}
       {/* Profile image and profile info */}
       <View style={styles.profileContainer}>
-        <AvatarView uri={profile?.avatar} size={80} />
+        <View>
+          <Pressable onPress={updateAvatar}>
+            <AvatarView uri={profile?.avatar} size={80} />
+            <View style={styles.editIconContainer}>
+              <MaterialIcons name="edit" size={16} color={colors.primary} />
+            </View>
+          </Pressable>
+        </View>
 
         <View style={styles.profileInfo}>
           <View style={styles.nameContainer}>
-            <TextInput
-              value={userName}
-              onChangeText={(text) => setUserName(text)}
-              style={styles.name}
-            />
+            <View style={styles.nameEditContainer}>
+              <TextInput
+                value={userName}
+                onChangeText={(text) => setUserName(text)}
+                style={styles.name}
+              />
+              <MaterialIcons name="edit" size={16} color={colors.primary} />
+            </View>
             {isNameChanged && (
               <Pressable onPress={updateProfile}>
                 <AntDesign name="check" size={24} color={colors.primary} />
@@ -206,6 +255,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  editIconContainer: {
+    position: 'absolute',
+    bottom: -5,
+    right: -5,
+    backgroundColor: colors.white,
+    padding: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  nameEditContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 });
 

@@ -8,8 +8,15 @@ export type LatestProduct = {
   id: string;
   name: string;
   thumbnail?: string;
+  image?: string[];
   category: string;
   price: number;
+  description: string;
+  seller: {
+    id: string;
+    name: string;
+    avatar?: { url: string };
+  };
 };
 
 interface Props {

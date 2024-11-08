@@ -1,5 +1,6 @@
 import { connect } from "mongoose";
 
+//const uri = "mongodb+srv://htkhoi7112003:07112003@mobileproject.ccmqe.mongodb.net/?retryWrites=true&w=majority&appName=MobileProject";
 const uri = "mongodb+srv://minhprojectmobile:15102003@mobileproject.kk6e8.mongodb.net/?retryWrites=true&w=majority&appName=MobileProject";
 // const uri = 'mongodb://127.0.0.1:27017/smart-cycle-market'
 
