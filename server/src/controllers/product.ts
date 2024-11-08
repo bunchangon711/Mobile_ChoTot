@@ -102,25 +102,25 @@ Upload and update images (restrict image qty).
 And send the response back.
     */
 
-  const { name, price, category, description, purchasingDate, thumbnail } =
-    req.body;
+  const { name, price, category, description, purchasingDate, thumbnail } = req.body;
   const productId = req.params.id;
+
   if (!isValidObjectId(productId))
     return sendErrorRes(res, "Invalid product id!", 422);
 
   const product = await ProductModel.findOneAndUpdate(
     { _id: productId, owner: req.user.id },
     {
-      // name,
-      // price,
-      // category,
-      // description,
-      // purchasingDate,
+      name,
+      price,
+      category, 
+      description,
+      purchasingDate,
+      thumbnail
     },
-    {
-      new: true,
-    }
+    { new: true }
   );
+  
   if (!product) return sendErrorRes(res, "Product not found!", 404);
 
   if (typeof thumbnail === "string") product.thumbnail = thumbnail;

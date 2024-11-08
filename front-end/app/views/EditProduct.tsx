@@ -23,6 +23,8 @@ import mime from "mime";
 import LoadingSpinner from "@ui/LoadingSpinner";
 import deepEqual from "deep-equal";
 import React from "react";
+import { MaterialIcons } from "@expo/vector-icons";
+
 type Props = NativeStackScreenProps<ProfileNavigatorParamList, "EditProduct">;
 
 type ProductInfo = {
@@ -53,7 +55,7 @@ const EditProduct: FC<Props> = ({ route }) => {
 
   const isFormChanged = deepEqual(productInfoToUpdate, product);
 
-  const onLongPress = (image: string) => {
+  const onPress = (image: string) => {
     setSelectedImage(image);
     setShowImageOptions(true);
   };
@@ -90,46 +92,50 @@ const EditProduct: FC<Props> = ({ route }) => {
   };
 
   const handleOnSubmit = async () => {
-    const dataToUpdate: ProductInfo = {
+    const dataToUpdate = {
       name: product.name,
       category: product.category,
       description: product.description,
-      price: product.price,
+      price: Number(product.price), // Convert price to number
       purchasingDate: product.date,
+      thumbnail: product.thumbnail
     };
+  
     const { error } = await yupValidate(newProductSchema, dataToUpdate);
     if (error) return showMessage({ message: error, type: "danger" });
-
+  
     const formData = new FormData();
-
+    formData.append('name', product.name);
+    formData.append('category', product.category);
+    formData.append('description', product.description);
+    formData.append('price', product.price.toString());
+    formData.append('purchasingDate', product.date.toISOString());
     if (product.thumbnail) {
-      formData.append("thumbnail", product.thumbnail);
+      formData.append('thumbnail', product.thumbnail);
     }
-
-    type productInfoKeys = keyof typeof dataToUpdate;
-
-    for (let key in dataToUpdate) {
-      const value = dataToUpdate[key as productInfoKeys];
-      if (value instanceof Date) formData.append(key, value.toISOString());
-      else formData.append(key, value);
+  
+    if (product.image) {
+      product.image.forEach((img, index) => {
+        if (!img.startsWith("https://res.cloudinary.com")) {
+          formData.append("images", {
+            uri: img,
+            name: `image_${index}`,
+            type: mime.getType(img) || "image/jpeg",
+          } as any);
+        }
+      });
     }
-
-    product.image?.forEach((img, index) => {
-      if (!img.startsWith("https://res.cloudinary.com")) {
-        formData.append("images", {
-          uri: img,
-          name: "image_" + index,
-          type: mime.getType(img) || "image/jpg",
-        } as any);
-      }
-    });
-
-    // send our new data to api
+  
     setBusy(true);
     const res = await runAxiosAsync<{ message: string }>(
-      authClient.patch("/product/" + product.id, formData)
+      authClient.patch("/product/" + product.id, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
     );
     setBusy(false);
+  
     if (res) {
       showMessage({ message: res.message, type: "success" });
     }
@@ -143,7 +149,25 @@ const EditProduct: FC<Props> = ({ route }) => {
           <Text style={styles.title}>Images</Text>
           <HorizontalImageList
             images={product.image || []}
-            onLongPress={onLongPress}
+            onPress={(image) => {
+              setSelectedImage(image);
+              setShowImageOptions(true);
+            }}
+            renderIcon={() => (
+              <MaterialIcons 
+                name="edit" 
+                size={20} 
+                color={colors.primary} 
+                style={{
+                  position: 'absolute',
+                  bottom: 5,
+                  right: 5,
+                  backgroundColor: 'rgba(255,255,255,0.8)',
+                  borderRadius: 12,
+                  padding: 2
+                }}
+              />
+            )}
           />
           <Pressable onPress={handleOnImageSelect} style={styles.imageSelector}>
             <FontAwesome5 name="images" size={30} color={colors.primary} />
