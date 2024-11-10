@@ -191,11 +191,8 @@ const ChatWindow: FC<Props> = ({ route }) => {
     <View style={styles.container}>
       <AppHeader
         backButton={<BackButton />}
-        center={
-          <PeerProfile name={peerProfile.name} avatar={peerProfile.avatar} />
-        }
+        center={<PeerProfile name={peerProfile.name} avatar={peerProfile.avatar} />}
       />
-
       <GiftedChat
         messages={formatConversationToIMessage(conversation)}
         user={{
@@ -211,12 +208,22 @@ const ChatWindow: FC<Props> = ({ route }) => {
           </TouchableOpacity>
         )}
         renderMessageImage={(props) => (
-          <Image 
-            source={{ uri: props.currentMessage?.image }}
-            style={{ width: 200, height: 200, borderRadius: 13, margin: 3 }}
-            resizeMode="cover"
-          />
+          <View style={[
+            styles.messageContainer,
+            props.currentMessage?.user._id === profile.id ? styles.rightMessage : styles.leftMessage
+          ]}>
+            <Image 
+              source={{ uri: props.currentMessage?.image }}
+              style={styles.messageImage}
+              resizeMode="cover"
+            />
+          </View>
         )}
+        listViewProps={{
+          contentContainerStyle: styles.messageList
+        }}
+        minInputToolbarHeight={50}
+        maxComposerHeight={100}
       />
     </View>
   );
@@ -230,6 +237,37 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     marginBottom: 10,
   },
+  messageContainer: {
+    width: 330, // Changed from maxWidth to fixed width
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    overflow: 'hidden',
+    borderTopLeftRadius: 15,
+  },
+  imageWrapper: {
+    width: '100%',
+    height: undefined,
+    aspectRatio: 1,
+  },
+  messageImage: {
+    width: '100%', // Changed from fixed 280 to 100%
+    height: undefined,
+    aspectRatio: 1.5,
+  },
+  rightMessage: {
+    alignSelf: 'flex-end',
+    marginRight: 0,
+  },
+  leftMessage: {
+    alignSelf: 'flex-start', 
+    marginLeft: 0,
+  },
+  messageList: {
+    paddingVertical: 10,
+    gap: 10
+  }
 });
 
 export default ChatWindow;
