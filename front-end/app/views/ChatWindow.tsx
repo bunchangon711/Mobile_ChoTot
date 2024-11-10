@@ -27,6 +27,7 @@ import { Image } from 'react-native';
 import colors from "@utils/colors";
 import { MaterialIcons } from '@expo/vector-icons';
 import { Alert } from 'react-native';
+import ImageView from "react-native-image-viewing";
 
 type Props = NativeStackScreenProps<AppStackParamList, "ChatWindow">;
 
@@ -76,6 +77,7 @@ const ChatWindow: FC<Props> = ({ route }) => {
   const dispatch = useDispatch();
   const { authClient } = useClient();
   const [fetchingChats, setFetchingChats] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const profile = authState.profile;
 
@@ -232,16 +234,24 @@ const ChatWindow: FC<Props> = ({ route }) => {
           </TouchableOpacity>
         )}
         renderMessageImage={(props) => (
-          <View style={[
-            styles.messageContainer,
-            props.currentMessage?.user._id === profile.id ? styles.rightMessage : styles.leftMessage
-          ]}>
-            <Image 
-              source={{ uri: props.currentMessage?.image }}
-              style={styles.messageImage}
-              resizeMode="cover"
-            />
-          </View>
+          <TouchableOpacity 
+            onPress={() => {
+              if (props.currentMessage?.image) {
+                setSelectedImage(props.currentMessage.image);
+              }
+            }}
+          >
+            <View style={[
+              styles.messageContainer,
+              props.currentMessage?.user._id === profile.id ? styles.rightMessage : styles.leftMessage
+            ]}>
+              <Image 
+                source={{ uri: props.currentMessage?.image }}
+                style={styles.messageImage}
+                resizeMode="cover"
+              />
+            </View>
+          </TouchableOpacity>
         )}
         listViewProps={{
           contentContainerStyle: styles.messageList
@@ -249,6 +259,14 @@ const ChatWindow: FC<Props> = ({ route }) => {
         onLongPress={handleLongPress}
         minInputToolbarHeight={50}
         maxComposerHeight={100}
+      />
+      <ImageView
+        images={selectedImage ? [{ uri: selectedImage }] : []}
+        imageIndex={0}
+        visible={!!selectedImage}
+        onRequestClose={() => setSelectedImage(null)}
+        doubleTapToZoomEnabled
+        swipeToCloseEnabled
       />
     </View>
   );
