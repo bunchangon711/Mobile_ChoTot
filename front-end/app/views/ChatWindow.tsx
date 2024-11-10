@@ -17,10 +17,15 @@ import {
   updateConversation,
 } from "app/store/conversation";
 import { FC, useCallback, useEffect, useState } from "react";
-import { View, StyleSheet, Text } from "react-native";
+import { View, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { GiftedChat, IMessage } from "react-native-gifted-chat";
 import { useDispatch, useSelector } from "react-redux";
 import React from "react";
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'react-native';
+import colors from "@utils/colors";
+import { MaterialIcons } from '@expo/vector-icons';
+
 type Props = NativeStackScreenProps<AppStackParamList, "ChatWindow">;
 
 type OutGoingMessage = {
@@ -28,6 +33,7 @@ type OutGoingMessage = {
     id: string;
     time: string;
     text: string;
+    image?: string;
     user: {
       id: string;
       name: string;
@@ -44,22 +50,20 @@ const getTime = (value: IMessage["createdAt"]) => {
 };
 
 const formatConversationToIMessage = (value?: Conversation): IMessage[] => {
-  const formattedValues = value?.chats.map((chat) => {
-    return {
-      _id: chat.id,
-      text: chat.text,
-      createdAt: new Date(chat.time),
-      received: chat.viewed,
-      user: {
-        _id: chat.user.id,
-        name: chat.user.name,
-        avatar: chat.user.avatar,
-      },
-    };
-  });
+  const formattedValues = value?.chats.map((chat) => ({
+    _id: chat.id,
+    text: chat.text,
+    createdAt: new Date(chat.time),
+    received: chat.viewed,
+    image: chat.image,
+    user: {
+      _id: chat.user.id,
+      name: chat.user.name,
+      avatar: chat.user.avatar,
+    },
+  }));
 
   const messages = formattedValues || [];
-
   return messages.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 };
 
@@ -84,22 +88,54 @@ const ChatWindow: FC<Props> = ({ route }) => {
         text: currentMessage.text,
         time: getTime(currentMessage.createdAt),
         user: { id: profile.id, name: profile.name, avatar: profile.avatar },
+        image: currentMessage.image // Add this
       },
       conversationId,
       to: peerProfile.id,
     };
 
     // this will update our store and also update the UI
-    dispatch(
-      updateConversation({
-        conversationId,
-        chat: { ...newMessage.message, viewed: false },
-        peerProfile,
-      })
-    );
+    dispatch(updateConversation({
+      conversationId,
+      chat: { ...newMessage.message, viewed: false },
+      peerProfile,
+    }));
 
     // sending message to our api
     socket.emit("chat:new", newMessage);
+  };
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+  
+    if (!result.canceled && result.assets[0]) {
+      const formData = new FormData();
+      const imageUri = result.assets[0].uri;
+      
+      formData.append('image', {
+        uri: imageUri,
+        type: 'image/jpeg', 
+        name: 'chat-image.jpg',
+      } as any);
+      
+      formData.append('content', ' '); // Add space instead of empty string
+
+      console.log('Sending image:', imageUri); // Add logging
+      
+      const res = await runAxiosAsync(
+        authClient.post(`/conversation/message/${conversationId}`, formData, {
+          headers: {'Content-Type': 'multipart/form-data'},
+        })
+      );
+      
+      if(res?.message) {
+        console.log('Server response:', res); // Add logging
+        await fetchOldChats(); // Refresh chat after image upload
+      }
+    }
   };
 
   const fetchOldChats = async () => {
@@ -107,6 +143,7 @@ const ChatWindow: FC<Props> = ({ route }) => {
     const res = await runAxiosAsync<{ conversation: Conversation }>(
       authClient("/conversation/chats/" + conversationId)
     );
+    console.log('Fetched conversation:', res?.conversation); // Add logging
     setFetchingChats(false);
 
     if (res?.conversation) {
@@ -168,6 +205,18 @@ const ChatWindow: FC<Props> = ({ route }) => {
         }}
         onSend={handleOnMessageSend}
         renderChatEmpty={() => <EmptyChatContainer />}
+        renderActions={() => (
+          <TouchableOpacity onPress={pickImage} style={styles.imageButton}>
+            <MaterialIcons name="image" size={24} color={colors.primary} />
+          </TouchableOpacity>
+        )}
+        renderMessageImage={(props) => (
+          <Image 
+            source={{ uri: props.currentMessage?.image }}
+            style={{ width: 200, height: 200, borderRadius: 13, margin: 3 }}
+            resizeMode="cover"
+          />
+        )}
       />
     </View>
   );
@@ -176,6 +225,10 @@ const ChatWindow: FC<Props> = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  imageButton: {
+    marginLeft: 10,
+    marginBottom: 10,
   },
 });
 

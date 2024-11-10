@@ -4,8 +4,10 @@ import {
   getLastChats,
   getOrCreateConversation,
   updateChatSeenStatus,
+  sendChatMessage
 } from "src/controllers/conversation";
 import { isAuth } from "src/middleware/auth";
+import fileParser from "src/middleware/fileParser";
 
 const conversationRouter = Router();
 
@@ -16,6 +18,12 @@ conversationRouter.patch(
   "/seen/:conversationId/:peerId",
   isAuth,
   updateChatSeenStatus
+);
+conversationRouter.post(
+  "/message/:conversationId",
+  isAuth,
+  fileParser,
+  sendChatMessage
 );
 
 export default conversationRouter;

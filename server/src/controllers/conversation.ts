@@ -3,6 +3,8 @@ import { ObjectId, Types, isValidObjectId } from "mongoose";
 import ConversationModel from "src/models/conversation";
 import UserModel from "src/models/user";
 import { sendErrorRes } from "src/utils/helper";
+import { uploadImage } from "src/cloud/index";
+import { File } from "formidable";
 
 interface UserProfile {
   id: string;
@@ -28,6 +30,7 @@ type PopulatedChat = {
   content: string;
   timestamp: Date;
   viewed: boolean;
+  image?: string;
   sentBy: { name: string; _id: ObjectId; avatar?: { url: string } };
 };
 
@@ -67,6 +70,40 @@ export const getOrCreateConversation: RequestHandler = async (req, res) => {
   res.json({ conversationId: conversation._id });
 };
 
+export const sendChatMessage: RequestHandler = async (req, res) => {
+  const { conversationId } = req.params;
+  const { content } = req.body;
+  const imageFile = req.files?.image as File;
+
+  if (!isValidObjectId(conversationId)) 
+    return sendErrorRes(res, "Invalid conversation id!", 422);
+
+  let imageUrl;
+  if (imageFile) {
+    const { url } = await uploadImage(imageFile.filepath);
+    imageUrl = url;
+  }
+
+  const conversation = await ConversationModel.findByIdAndUpdate(
+    conversationId,
+    {
+      $push: {
+        chats: {
+          sentBy: req.user.id,
+          content,
+          image: imageUrl,
+          timestamp: new Date(),
+        },
+      },
+    },
+    { new: true }
+  );
+
+  if (!conversation) return sendErrorRes(res, "Conversation not found!", 404);
+
+  res.json({ message: "Message sent successfully" });
+};
+
 export const getConversations: RequestHandler = async (req, res) => {
   const { conversationId } = req.params;
 
@@ -85,7 +122,7 @@ export const getConversations: RequestHandler = async (req, res) => {
       select: "name avatar.url",
     })
     .select(
-      "sentBy chats._id chats.content chats.timestamp chats.viewed participants"
+      "sentBy chats._id chats.content chats.timestamp chats.viewed chats.image participants"
     );
 
   if (!conversation) return sendErrorRes(res, "Details not found!", 404);
@@ -99,6 +136,7 @@ export const getConversations: RequestHandler = async (req, res) => {
       text: c.content,
       time: c.timestamp.toISOString(),
       viewed: c.viewed,
+      image: c.image, // Add this line to include image URL
       user: {
         id: c.sentBy._id.toString(),
         name: c.sentBy.name,

@@ -13,6 +13,7 @@ interface Chat {
   id: string;
   viewed: boolean;
   user: UserProfile;
+  image?: string; 
 }
 
 export interface Conversation {

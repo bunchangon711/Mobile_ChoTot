@@ -4,6 +4,7 @@ interface Chat {
   _id: ObjectId;
   sentBy: ObjectId;
   content: string;
+  image?: string; // URL to stored image
   timestamp: Date;
   viewed: boolean;
 }
@@ -34,6 +35,9 @@ const schema = new Schema<ConversationDocument>(
         content: {
           type: String,
           required: true,
+        },
+        image: {
+          type: String,
         },
         timestamp: {
           type: Date,
