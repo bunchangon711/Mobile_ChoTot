@@ -121,7 +121,7 @@ const ChatWindow: FC<Props> = ({ route }) => {
         name: 'chat-image.jpg',
       } as any);
       
-      formData.append('content', ' '); // Add space instead of empty string
+      formData.append('content', ''); // Add space instead of empty string
 
       console.log('Sending image:', imageUri); // Add logging
       
