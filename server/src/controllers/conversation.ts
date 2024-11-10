@@ -104,6 +104,23 @@ export const sendChatMessage: RequestHandler = async (req, res) => {
   res.json({ message: "Message sent successfully" });
 };
 
+export const deleteMessage: RequestHandler = async (req, res) => {
+  const { conversationId, messageId } = req.params;
+  
+  if (!isValidObjectId(conversationId) || !isValidObjectId(messageId))
+    return sendErrorRes(res, "Invalid ids!", 422);
+
+  const conversation = await ConversationModel.findOneAndUpdate(
+    { _id: conversationId, "chats._id": messageId, "chats.sentBy": req.user.id },
+    { $pull: { chats: { _id: messageId } } },
+    { new: true }
+  );
+
+  if (!conversation) return sendErrorRes(res, "Message not found or unauthorized!", 404);
+  
+  res.json({ message: "Message deleted successfully" });
+};
+
 export const getConversations: RequestHandler = async (req, res) => {
   const { conversationId } = req.params;
 

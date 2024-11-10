@@ -4,7 +4,8 @@ import {
   getLastChats,
   getOrCreateConversation,
   updateChatSeenStatus,
-  sendChatMessage
+  sendChatMessage,
+  deleteMessage
 } from "src/controllers/conversation";
 import { isAuth } from "src/middleware/auth";
 import fileParser from "src/middleware/fileParser";
@@ -25,5 +26,6 @@ conversationRouter.post(
   fileParser,
   sendChatMessage
 );
+conversationRouter.delete("/message/:conversationId/:messageId", isAuth, deleteMessage);
 
 export default conversationRouter;

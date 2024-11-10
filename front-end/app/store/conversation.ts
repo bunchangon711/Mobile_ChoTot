@@ -1,6 +1,7 @@
 import { createSelector, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from ".";
 
+
 interface UserProfile {
   id: string;
   name: string;
@@ -81,11 +82,19 @@ const slice = createSlice({
         conversations[index].chats.push(payload.chat);
       }
     },
+    deleteMessage(
+      state,
+      { payload }: PayloadAction<{conversationId: string; messageId: string}>
+    ) {
+      const conversation = state.conversations.find(c => c.id === payload.conversationId);
+      if (conversation) {
+        conversation.chats = conversation.chats.filter(chat => chat.id !== payload.messageId);
+      }
+    },
   },
 });
 
-export const { addConversation, updateChatViewed, updateConversation } =
-  slice.actions;
+export const { addConversation, updateChatViewed, updateConversation, deleteMessage } = slice.actions;
 
 export const selectConversationById = (conversationId: string) => {
   return createSelector(

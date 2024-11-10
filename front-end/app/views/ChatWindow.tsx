@@ -15,6 +15,7 @@ import {
   addConversation,
   selectConversationById,
   updateConversation,
+  deleteMessage
 } from "app/store/conversation";
 import { FC, useCallback, useEffect, useState } from "react";
 import { View, StyleSheet, Text, TouchableOpacity } from "react-native";
@@ -25,6 +26,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'react-native';
 import colors from "@utils/colors";
 import { MaterialIcons } from '@expo/vector-icons';
+import { Alert } from 'react-native';
 
 type Props = NativeStackScreenProps<AppStackParamList, "ChatWindow">;
 
@@ -138,6 +140,28 @@ const ChatWindow: FC<Props> = ({ route }) => {
     }
   };
 
+  const handleLongPress = useCallback((_context: any, message: IMessage) => {
+    if (message.user._id === profile?.id) {
+      Alert.alert(
+        "Delete Message",
+        "Are you sure you want to delete this message?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              await runAxiosAsync(
+                authClient.delete(`/conversation/message/${conversationId}/${message._id}`)
+              );
+              dispatch(deleteMessage({ conversationId, messageId: message._id.toString() }));
+            },
+          },
+        ]
+      );
+    }
+  }, [profile, conversationId]);
+
   const fetchOldChats = async () => {
     setFetchingChats(true);
     const res = await runAxiosAsync<{ conversation: Conversation }>(
@@ -222,6 +246,7 @@ const ChatWindow: FC<Props> = ({ route }) => {
         listViewProps={{
           contentContainerStyle: styles.messageList
         }}
+        onLongPress={handleLongPress}
         minInputToolbarHeight={50}
         maxComposerHeight={100}
       />
