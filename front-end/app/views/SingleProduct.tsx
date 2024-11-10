@@ -86,13 +86,31 @@ const SingleProduct: FC<Props> = ({ route, navigation }) => {
 
   const onChatBtnPress = async () => {
     if (!productInfo) return;
-
+  
     setFetchingChatId(true);
     const res = await runAxiosAsync<{ conversationId: string }>(
       authClient.get("/conversation/with/" + productInfo.seller.id)
     );
     setFetchingChatId(false);
+    
     if (res) {
+      const formData = new FormData();
+      formData.append('content', `Tôi muốn mua: ${productInfo.name}\nGiá: ${productInfo.price}VND`);
+      
+      if (productInfo.thumbnail) {
+        formData.append('image', {
+          uri: productInfo.thumbnail,
+          type: 'image/jpeg',
+          name: 'product-image.jpg'
+        } as any);
+      }
+  
+      await runAxiosAsync(
+        authClient.post(`/conversation/message/${res.conversationId}`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+      );
+  
       navigation.navigate("ChatWindow", {
         conversationId: res.conversationId,
         peerProfile: productInfo.seller,

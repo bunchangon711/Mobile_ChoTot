@@ -14,4 +14,10 @@ cloudinary.config({
 const cloudUploader = cloudinary.uploader;
 
 export const cloudApi = cloudinary.api;
+
+export const uploadImage = async (imagePath: string) => {
+  const result = await cloudinary.uploader.upload(imagePath);
+  return { url: result.secure_url, id: result.public_id };
+};
+
 export default cloudUploader;

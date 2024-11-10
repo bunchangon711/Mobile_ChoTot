@@ -32,8 +32,15 @@ const AppNavigator: FC<Props> = (props) => {
       <Stack.Screen name="Chats" component={Chats} />
       <Stack.Screen name="ProductList" component={ProductList} />
       <Stack.Screen name="SingleProduct" component={SingleProduct} />
-      <Stack.Screen name="ChatWindow" component={ChatWindow} />
-      <Stack.Screen name="EditProduct" component={EditProduct} /> 
+      <Stack.Screen 
+        name="ChatWindow" 
+        component={ChatWindow}
+        options={{ 
+          presentation: 'fullScreenModal',
+          animation: 'slide_from_right'
+        }} 
+      />
+      <Stack.Screen name="EditProduct" component={EditProduct} />
     </Stack.Navigator>
   );
 };

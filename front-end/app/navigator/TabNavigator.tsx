@@ -6,6 +6,7 @@ import { AntDesign } from "@expo/vector-icons";
 import AppNavigator from "./AppNavigator";
 import ProfileNavigator from "./ProfileNavigator";
 import NewListing from "@views/NewListing";
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 
 const Tab = createBottomTabNavigator();
 
@@ -50,16 +51,22 @@ const PostButton = () => {
 const TabNavigator = () => {
   return (
     <Tab.Navigator 
-      screenOptions={{ 
-        headerShown: false,
-        tabBarActiveTintColor: '#F28500',
-        tabBarInactiveTintColor: 'gray',
-        tabBarStyle: {
-          backgroundColor: 'white',
-          borderTopWidth: 0,
-          elevation: 8,
-          height: 60,
-        },
+      screenOptions={({ route }) => {
+        const routeName = getFocusedRouteNameFromRoute(route);
+        return { 
+          headerShown: false,
+          tabBarActiveTintColor: '#F28500',
+          tabBarInactiveTintColor: 'gray',
+          tabBarStyle: {
+            backgroundColor: 'white',
+            borderTopWidth: 0,
+            elevation: 8,
+            height: 60,
+            display: routeName === 'ChatWindow' ? 'none' : 'flex',
+          },
+          // Hide tab bar completely for ChatWindow
+          tabBarButton: routeName === 'ChatWindow' ? () => null : undefined,
+        }
       }}
     >
       <Tab.Screen

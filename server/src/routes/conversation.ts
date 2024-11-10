@@ -4,8 +4,11 @@ import {
   getLastChats,
   getOrCreateConversation,
   updateChatSeenStatus,
+  sendChatMessage,
+  deleteMessage
 } from "src/controllers/conversation";
 import { isAuth } from "src/middleware/auth";
+import fileParser from "src/middleware/fileParser";
 
 const conversationRouter = Router();
 
@@ -17,5 +20,12 @@ conversationRouter.patch(
   isAuth,
   updateChatSeenStatus
 );
+conversationRouter.post(
+  "/message/:conversationId",
+  isAuth,
+  fileParser,
+  sendChatMessage
+);
+conversationRouter.delete("/message/:conversationId/:messageId", isAuth, deleteMessage);
 
 export default conversationRouter;
