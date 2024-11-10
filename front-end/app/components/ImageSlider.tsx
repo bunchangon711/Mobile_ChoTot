@@ -1,8 +1,9 @@
 import ProductImage from "@ui/ProductImage";
 import colors from "@utils/colors";
-import React from "react";
-import { FC, useRef, useState } from "react";
+import React, { FC, useRef, useState } from "react";
 import { View, StyleSheet, FlatList, Text, ViewToken } from "react-native";
+import ImageView from "react-native-image-viewing";
+import { TouchableOpacity } from "react-native";
 
 interface Props {
   images?: string[];
@@ -10,6 +11,7 @@ interface Props {
 
 const ImageSlider: FC<Props> = ({ images }) => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isImageViewVisible, setIsImageViewVisible] = useState(false);
   const viewableConfig = useRef({ itemVisiblePercentThreshold: 50 });
 
   const onViewableItemsChanged = useRef(
@@ -25,18 +27,32 @@ const ImageSlider: FC<Props> = ({ images }) => {
       <FlatList
         contentContainerStyle={styles.flatList}
         data={images}
-        renderItem={({ item }) => <ProductImage uri={item} />}
+        renderItem={({ item }) => (
+          <TouchableOpacity onPress={() => setIsImageViewVisible(true)}>
+            <ProductImage uri={item} />
+          </TouchableOpacity>
+        )}
         horizontal
         showsHorizontalScrollIndicator={false}
         pagingEnabled
         viewabilityConfig={viewableConfig.current}
         onViewableItemsChanged={onViewableItemsChanged.current}
       />
+      
       <View style={styles.indicator}>
         <Text style={styles.indicatorText}>
           {activeIndex + 1}/{images?.length}
         </Text>
       </View>
+
+      <ImageView
+        images={images.map(uri => ({ uri }))}
+        imageIndex={activeIndex}
+        visible={isImageViewVisible}
+        onRequestClose={() => setIsImageViewVisible(false)}
+        doubleTapToZoomEnabled
+        swipeToCloseEnabled
+      />
     </View>
   );
 };

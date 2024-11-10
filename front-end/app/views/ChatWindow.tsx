@@ -28,6 +28,7 @@ import colors from "@utils/colors";
 import { MaterialIcons } from '@expo/vector-icons';
 import { Alert } from 'react-native';
 import ImageView from "react-native-image-viewing";
+import EmojiSelector from 'react-native-emoji-selector';
 
 type Props = NativeStackScreenProps<AppStackParamList, "ChatWindow">;
 
@@ -78,6 +79,7 @@ const ChatWindow: FC<Props> = ({ route }) => {
   const { authClient } = useClient();
   const [fetchingChats, setFetchingChats] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const profile = authState.profile;
 
@@ -215,10 +217,12 @@ const ChatWindow: FC<Props> = ({ route }) => {
 
   return (
     <View style={styles.container}>
-      <AppHeader
-        backButton={<BackButton />}
-        center={<PeerProfile name={peerProfile.name} avatar={peerProfile.avatar} />}
-      />
+      <View style={styles.headerContainer}>
+        <AppHeader
+          backButton={<BackButton />}
+          center={<PeerProfile name={peerProfile.name} avatar={peerProfile.avatar} />}
+        />
+      </View>
       <GiftedChat
         messages={formatConversationToIMessage(conversation)}
         user={{
@@ -229,15 +233,25 @@ const ChatWindow: FC<Props> = ({ route }) => {
         onSend={handleOnMessageSend}
         renderChatEmpty={() => <EmptyChatContainer />}
         renderActions={() => (
-          <TouchableOpacity onPress={pickImage} style={styles.imageButton}>
-            <MaterialIcons name="image" size={24} color={colors.primary} />
-          </TouchableOpacity>
+          <View style={styles.actionButtons}>
+            <TouchableOpacity onPress={pickImage} style={styles.actionButton}>
+              <MaterialIcons name="image" size={24} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowEmojiPicker(!showEmojiPicker)} style={styles.actionButton}>
+              <MaterialIcons name="emoji-emotions" size={24} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
         )}
         renderMessageImage={(props) => (
           <TouchableOpacity 
             onPress={() => {
               if (props.currentMessage?.image) {
                 setSelectedImage(props.currentMessage.image);
+              }
+            }}
+            onLongPress={() => {
+              if (props.currentMessage) {
+                handleLongPress(null, props.currentMessage);
               }
             }}
           >
@@ -260,6 +274,26 @@ const ChatWindow: FC<Props> = ({ route }) => {
         minInputToolbarHeight={50}
         maxComposerHeight={100}
       />
+      {showEmojiPicker ? (
+        <View style={styles.emojiPicker}>
+          <EmojiSelector 
+            onEmojiSelected={emoji => {
+              handleOnMessageSend([{
+                _id: Math.random().toString(),
+                text: emoji,
+                createdAt: new Date(),
+                user: {
+                  _id: profile.id,
+                  name: profile.name,
+                  avatar: profile.avatar
+                }
+              }]);
+              setShowEmojiPicker(false);
+            }}
+            columns={8}
+          />
+        </View>
+      ) : null}
       <ImageView
         images={selectedImage ? [{ uri: selectedImage }] : []}
         imageIndex={0}
@@ -271,10 +305,16 @@ const ChatWindow: FC<Props> = ({ route }) => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  headerContainer: {
+    backgroundColor: "#fff",
+    height: 50,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   imageButton: {
     marginLeft: 10,
@@ -310,6 +350,17 @@ const styles = StyleSheet.create({
   messageList: {
     paddingVertical: 10,
     gap: 10
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    marginLeft: 10,
+    marginBottom: 10,
+  },
+  actionButton: {
+    marginRight: 10,
+  },
+  emojiPicker: {
+    height: 250,
   }
 });
 
