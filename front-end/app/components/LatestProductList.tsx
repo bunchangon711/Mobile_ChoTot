@@ -41,6 +41,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     marginBottom: 15,
     letterSpacing: 0.5,
+    marginLeft: 20
   },
 });
 

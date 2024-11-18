@@ -71,7 +71,7 @@ const testData = [
   },
 ];
 
-interface Props {}
+interface Props { }
 
 const Home: FC<Props> = (props) => {
   const [products, setProducts] = useState<LatestProduct[]>([]);
@@ -140,6 +140,15 @@ const Home: FC<Props> = (props) => {
           />
           <News />
         </View>
+
+        <View>
+
+          <LatestProductList
+            data={products}
+            onPress={({ id }) => navigate("SingleProduct", { id })}
+          />
+        </View>
+
       </ScrollView>
     </>
   );
@@ -158,13 +167,13 @@ const styles = StyleSheet.create({
   searchBarContainer: {
     flex: 1,
     marginLeft: 10,
-    marginRight: 10, 
+    marginRight: 10,
   },
   chatNotification: {
     flexShrink: 0,
   },
   paddedSection: {
-    padding: 10, 
+    padding: 10,
   },
 });
 

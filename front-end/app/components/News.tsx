@@ -4,27 +4,27 @@ import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 const newsData = [
   {
     id: '1',
-    title: 'Đặt xe online',
+    title: 'Cơ hội 10 triệu',
     image: { uri: 'https://res.cloudinary.com/dc6gusuog/image/upload/v1727686810/ct1_uw6g0f.jpg' },
   },
   {
     id: '2',
-    title: 'Tưng bừng khai trương',
+    title: 'Ưu đãi khủng từ Vinfast!',
     image: { uri: 'https://res.cloudinary.com/dc6gusuog/image/upload/v1727854953/ct5_bupym1.jpg' },
   },
   {
     id: '3',
-    title: 'Hình sạc phòng vay',
+    title: 'Đặt xe ngay!',
     image: { uri: 'https://res.cloudinary.com/dc6gusuog/image/upload/v1727686810/ct4_xqzpi4.jpg' },
   },
   {
     id: '4',
-    title: 'Cơ hội 10 triệu',
+    title: 'Ưu đãi độc quyền khi mua xe mới',
     image: { uri: 'https://res.cloudinary.com/dc6gusuog/image/upload/v1727686810/ct2_yg2svf.jpg' },
   },
   {
     id: '5',
-    title: 'Tính năng thanh toán',
+    title: 'Tưng bừng khai trương',
     image: { uri: 'https://res.cloudinary.com/dc6gusuog/image/upload/v1727686810/ct3_envlmk.png' },
   },
 ];

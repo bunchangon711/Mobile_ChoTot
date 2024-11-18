@@ -19,6 +19,7 @@ export type AppStackParamList = {
     peerProfile: { id: string; name: string; avatar?: string };
   };
   EditProduct: { product: Product }; 
+  ProductDetail: { productId: string };
 };
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
