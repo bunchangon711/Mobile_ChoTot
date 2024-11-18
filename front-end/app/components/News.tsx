@@ -4,7 +4,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 const newsData = [
   {
     id: '1',
-    title: 'Cơ hội 10 triệu',
+    title: 'Ưu đãi 10 triệu khi lên đời iPhone 16 tại FPTShop',
     image: { uri: 'https://res.cloudinary.com/dc6gusuog/image/upload/v1727686810/ct1_uw6g0f.jpg' },
   },
   {
