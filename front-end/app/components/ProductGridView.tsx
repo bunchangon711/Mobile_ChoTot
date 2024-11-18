@@ -1,8 +1,8 @@
 import { FC } from "react";
-import { FlatList } from "react-native"; // Import FlatList từ react-native
 import { LatestProduct } from "./LatestProductList";
 import ProductCard from "@ui/ProductCard"; // Giả sử ProductCard là component hiển thị sản phẩm
 import React from "react";
+import { View } from "react-native";
 
 interface Props {
   data: LatestProduct[];
@@ -10,18 +10,16 @@ interface Props {
 }
 
 const ProductGridView: FC<Props> = ({ data, onPress }) => {
-  const renderItem = ({ item }: { item: LatestProduct }) => (
-    <ProductCard product={item} onPress={onPress} />
-  );
-
   return (
-    <FlatList
-      data={data}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={{ paddingHorizontal: 16 }}
-      showsVerticalScrollIndicator={false}
-    />
+    <View style={{ paddingHorizontal: 4 }}>
+      {data.map((item) => (
+        <ProductCard 
+          key={item.id}
+          product={item} 
+          onPress={onPress}
+        />
+      ))}
+    </View>
   );
 };
 
