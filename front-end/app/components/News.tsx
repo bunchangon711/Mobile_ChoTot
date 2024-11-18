@@ -47,7 +47,7 @@ const News = () => {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
+    padding: 8,
     backgroundColor: '#fff',
   },
   header: {
