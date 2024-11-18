@@ -9,6 +9,7 @@ import {
   listNewProduct,
   searchProducts,
   updateProduct,
+  addWishList,
 } from "src/controllers/product";
 import { isAuth } from "src/middleware/auth";
 import fileParser from "src/middleware/fileParser";
@@ -39,5 +40,7 @@ productRouter.get("/by-category/:category", getProductsByCategory);
 productRouter.get("/latest", getLatestProducts);
 productRouter.get("/listings", isAuth, getListings);
 productRouter.get("/search", isAuth, searchProducts);
+
+productRouter.post("/wishlist", isAuth, addWishList);
 
 export default productRouter;

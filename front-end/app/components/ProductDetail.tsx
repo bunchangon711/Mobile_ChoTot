@@ -3,8 +3,8 @@ import colors from "@utils/colors";
 import { formatDate } from "@utils/date";
 import { formatPrice } from "@utils/helper";
 import size from "@utils/size";
-import { FC } from "react";
-import { View, StyleSheet, Text, ScrollView } from "react-native";
+import { FC, useState } from "react";
+import { View, StyleSheet, Text, ScrollView, TouchableOpacity } from "react-native";
 import ImageSlider from "./ImageSlider";
 import { Product } from "app/store/listings";
 import React from "react";
@@ -15,6 +15,14 @@ interface Props {
 }
 
 const ProductDetail: FC<Props> = ({ product }) => {
+  // State to manage whether the product is in the wishlist
+  const [isInWishlist, setIsInWishlist] = useState(false);
+
+  // Toggle wishlist state when heart icon is pressed
+  const handleWishlistToggle = () => {
+    setIsInWishlist((prevState) => !prevState); // Toggle between true/false
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -26,6 +34,15 @@ const ProductDetail: FC<Props> = ({ product }) => {
           <Text style={styles.date}>
             Ngày mua: {formatDate(product.date, "dd LLL yyyy")}
           </Text>
+
+          {/* Heart icon for wishlist */}
+          <TouchableOpacity onPress={handleWishlistToggle} style={styles.wishlistIcon}>
+            <Ionicons
+              name={isInWishlist ? "heart" : "heart-outline"} // Toggle between filled and outline heart
+              size={30}
+              color={isInWishlist ? colors.active : "#767575"}
+            />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.descriptionSection}>
@@ -119,6 +136,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     letterSpacing: 0.5,
+  },
+  wishlistIcon: {
+    position: "absolute",
+    top: 15,
+    right: 15,
   },
 });
 

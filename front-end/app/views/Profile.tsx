@@ -139,138 +139,170 @@ const Profile: FC<Props> = (props) => {
       }
       contentContainerStyle={styles.container}
     >
+      {/* Thông báo xác thực */}
       {!profile?.verified && (
         <View style={styles.verificationLinkContainer}>
           <Text style={styles.verificationTitle}>
-            It look like your profile is not verified.
+            Your profile is not verified.
           </Text>
           {busy ? (
-            <Text style={styles.verificationLink}>Please Wait...</Text>
+            <Text style={styles.verificationLink}>Please wait...</Text>
           ) : (
             <Text onPress={getVerificationLink} style={styles.verificationLink}>
-              Tap here to get the link.
+              Tap here to verify your profile.
             </Text>
           )}
         </View>
       )}
-      {/* Profile image and profile info */}
-      <View style={styles.profileContainer}>
-        <View>
-          <Pressable onPress={updateAvatar}>
-            <AvatarView uri={profile?.avatar} size={80} />
-            <View style={styles.editIconContainer}>
-              <MaterialIcons name="edit" size={16} color={colors.primary} />
-            </View>
-          </Pressable>
-        </View>
-
-        <View style={styles.profileInfo}>
-          <View style={styles.nameContainer}>
-            <View style={styles.nameEditContainer}>
-              <TextInput
-                value={userName}
-                onChangeText={(text) => setUserName(text)}
-                style={styles.name}
-              />
-              <MaterialIcons name="edit" size={16} color={colors.primary} />
-            </View>
-            {isNameChanged && (
-              <Pressable onPress={updateProfile}>
-                <AntDesign name="check" size={24} color={colors.primary} />
-              </Pressable>
-            )}
+  
+      {/* Avatar và thông tin cá nhân */}
+      <View style={styles.profileHeader}>
+        <Pressable onPress={updateAvatar}>
+          <AvatarView uri={profile?.avatar} size={100} />
+          <View style={styles.editIconContainer}>
+            <MaterialIcons name="edit" size={16} color={colors.primary} />
           </View>
-          <Text style={styles.email}>{profile?.email}</Text>
-        </View>
+        </Pressable>
+        <TextInput
+          value={userName}
+          onChangeText={setUserName}
+          style={styles.name}
+          placeholder="Enter your name"
+        />
+        {isNameChanged && (
+          <Pressable onPress={updateProfile} style={styles.updateButton}>
+            <AntDesign name="check" size={20} color="#FFF" />
+            <Text style={styles.updateButtonText}>Save</Text>
+          </Pressable>
+        )}
+        <Text style={styles.email}>{profile?.email}</Text>
       </View>
-
-      <FormDivider />
-
-      {/* Options for profile */}
-
-      <ProfileOptionListItem
-        style={styles.marginBottom}
-        antIconName="message1"
-        title="Messages"
-        onPress={onMessagePress}
-        active={totalUnreadMessages > 0}
-      />
-      <ProfileOptionListItem
-        style={styles.marginBottom}
-        antIconName="appstore-o"
-        title="Your Listings"
-        onPress={onListingPress}
-      />
-      <ProfileOptionListItem
-        antIconName="logout"
-        title="Log out"
-        onPress={signOut}
-      />
+  
+      {/* Tuỳ chọn */}
+      <View style={styles.optionsContainer}>
+        <ProfileOptionListItem
+          style={styles.optionCard}
+          antIconName="message1"
+          title="Messages"
+          onPress={onMessagePress}
+          active={totalUnreadMessages > 0}
+        />
+        <ProfileOptionListItem
+          style={styles.optionCard}
+          antIconName="appstore-o"
+          title="Your Listings"
+          onPress={onListingPress}
+        />
+        <ProfileOptionListItem
+          style={styles.optionCard}
+          antIconName="logout"
+          title="Log out"
+          onPress={signOut}
+        />
+      </View>
     </ScrollView>
   );
+  
 };
 
 const styles = StyleSheet.create({
+  container: {
+    padding: 20,
+    backgroundColor: "#FFFFFF",
+  },
   verificationLinkContainer: {
-    padding: 10,
-    backgroundColor: colors.deActive,
-    marginVertical: 10,
-    borderRadius: 5,
+    backgroundColor: "#E8F5E9",
+    padding: 20,
+    marginBottom: 25,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#388E3C",
   },
   verificationTitle: {
-    fontWeight: "600",
-    color: colors.primary,
+    fontWeight: "bold",
+    color: "#388E3C",
     textAlign: "center",
+    fontSize: 16,
+    marginBottom: 10,
   },
   verificationLink: {
     fontWeight: "600",
-    color: colors.active,
+    color: "#2E7D32",
     textAlign: "center",
-    paddingTop: 5,
+    textDecorationLine: "underline",
   },
-  container: {
-    padding: size.padding,
-  },
-  profileContainer: {
-    flexDirection: "row",
+  profileHeader: {
     alignItems: "center",
-  },
-  profileInfo: {
-    flex: 1,
-    paddingLeft: size.padding,
+    marginBottom: 25,
+    padding: 30,
+    backgroundColor: "#E8F5E9",
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 5,
   },
   name: {
-    color: colors.primary,
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "bold",
+    color: "#388E3C",
+    marginTop: 15,
+    textAlign: "center",
   },
   email: {
-    color: colors.primary,
-    paddingTop: 2,
+    fontSize: 16,
+    color: "#616161",
+    marginTop: 8,
   },
-  marginBottom: {
+  editIconContainer: {
+    position: "absolute",
+    bottom: -10,
+    right: -10,
+    backgroundColor: "#FFFFFF",
+    padding: 8,
+    borderRadius: 15,
+    borderColor: "#388E3C",
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
+  },
+  updateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 15,
+    backgroundColor: "#388E3C",
+    padding: 12,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3,
+  },
+  updateButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+    marginLeft: 10,
+  },
+  optionsContainer: {
+    marginTop: 25,
+  },
+  optionCard: {
+    backgroundColor: "#F1F8E9",
+    padding: 20,
+    borderRadius: 20,
     marginBottom: 15,
-  },
-  nameContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-  },
-  editIconContainer: {
-    position: 'absolute',
-    bottom: -5,
-    right: -5,
-    backgroundColor: colors.white,
-    padding: 4,
-    borderRadius: 12,
+    borderColor: "#388E3C",
     borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  nameEditContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
 });
 
+
+
 export default Profile;
+

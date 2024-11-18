@@ -3,6 +3,7 @@ import { RequestHandler } from "express";
 import { FilterQuery, isValidObjectId } from "mongoose";
 import cloudUploader, { cloudApi } from "src/cloud";
 import ProductModel, { ProductDocument } from "src/models/product";
+import WishListModel from "src/models/WishList";
 import { UserDocument } from "src/models/user";
 import categories from "src/utils/categories";
 import { sendErrorRes } from "src/utils/helper";
@@ -433,4 +434,39 @@ export const searchProducts: RequestHandler = async (req, res) => {
   }));
 
   res.json({ products: formattedProducts });
+};
+
+export const addWishList: RequestHandler = async (req, res) => {
+  const { productId } = req.body;
+
+  // Validate the product ID
+  if (!isValidObjectId(productId)) {
+    return sendErrorRes(res, "Invalid product ID", 422);
+  }
+
+  // Check if the product exists
+  const product = await ProductModel.findById(productId);
+  if (!product) {
+    return sendErrorRes(res, "Product not found", 404);
+  }
+
+  // Check if the product is already in the wishlist
+  const existingWishlistItem = await WishListModel.findOne({
+    user: req.user.id,
+    product: productId,
+  });
+
+  if (existingWishlistItem) {
+    return sendErrorRes(res, "Product already in wishlist", 409);
+  }
+
+  // Add to wishlist
+  const newWishListItem = new WishListModel({
+    user: req.user.id,
+    product: productId,
+  });
+
+  await newWishListItem.save();
+
+  res.status(201).json({ message: "Product added to wishlist!" });
 };

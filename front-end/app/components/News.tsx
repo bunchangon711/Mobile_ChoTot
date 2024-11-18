@@ -77,8 +77,8 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: '70%', // Adjust height for better aspect ratio
-    resizeMode: 'cover', // Maintain aspect ratio
+    height: '70%',
+    resizeMode: 'cover',
   },
   title: {
     marginTop: 8,
