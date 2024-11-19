@@ -5,6 +5,7 @@ import UserModel from "src/models/user";
 import { sendErrorRes } from "src/utils/helper";
 import { uploadImage } from "src/cloud/index";
 import { File } from "formidable";
+import { Request } from 'express';
 
 interface UserProfile {
   id: string;
@@ -40,6 +41,12 @@ type PopulatedParticipant = {
   avatar?: { url: string };
 };
 
+type PopulatedUser = {
+  id: string;
+  name: string;
+  avatar?: { url: string };
+}
+
 export const getOrCreateConversation: RequestHandler = async (req, res) => {
   const { peerId } = req.params;
 
@@ -74,6 +81,7 @@ export const sendChatMessage: RequestHandler = async (req, res) => {
   const { conversationId } = req.params;
   const { content } = req.body;
   const imageFile = req.files?.image as File;
+  const typedUser = req.user as unknown as PopulatedUser;
 
   if (!isValidObjectId(conversationId)) 
     return sendErrorRes(res, "Invalid conversation id!", 422);
@@ -84,12 +92,16 @@ export const sendChatMessage: RequestHandler = async (req, res) => {
     imageUrl = url;
   }
 
-  // Only create chat entry if there's either content or image
   const chatData = imageUrl 
-    ? { image: imageUrl }
+    ? { image: imageUrl, content: '' }
     : { content };  
 
-  const conversation = await ConversationModel.findByIdAndUpdate(
+  const conversation = await ConversationModel.findById(conversationId)
+    .populate('participants');
+
+  if (!conversation) return sendErrorRes(res, "Conversation not found!", 404);
+
+  const updatedConversation = await ConversationModel.findByIdAndUpdate(
     conversationId,
     {
       $push: {
@@ -103,10 +115,40 @@ export const sendChatMessage: RequestHandler = async (req, res) => {
     { new: true }
   );
 
-  if (!conversation) return sendErrorRes(res, "Conversation not found!", 404);
+  if (!updatedConversation) return sendErrorRes(res, "Failed to update conversation", 500);
+
+  const messageData = {
+    id: updatedConversation.chats[updatedConversation.chats.length - 1]._id,
+    text: content || '',
+    time: new Date().toISOString(),
+    image: imageUrl,
+    viewed: false,
+    user: {
+      id: typedUser.id,
+      name: typedUser.name,
+      avatar: typedUser.avatar?.url
+    }
+  };
+
+  // Add this before the socket emit:
+  const io = req.app.get('io');
+  console.log('IO instance:', io);
+
+  if (io) {
+    io.emit('new_message', {
+      message: messageData,
+      from: {
+        id: typedUser.id,
+        name: typedUser.name,
+        avatar: typedUser.avatar?.url
+      },
+      conversationId
+    });
+  }
 
   res.json({ message: "Message sent successfully" });
 };
+
 
 export const deleteMessage: RequestHandler = async (req, res) => {
   const { conversationId, messageId } = req.params;

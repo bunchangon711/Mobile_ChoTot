@@ -9,6 +9,7 @@ import {
 } from "src/controllers/conversation";
 import { isAuth } from "src/middleware/auth";
 import fileParser from "src/middleware/fileParser";
+import { Server } from 'socket.io';
 
 const conversationRouter = Router();
 
@@ -29,3 +30,11 @@ conversationRouter.post(
 conversationRouter.delete("/message/:conversationId/:messageId", isAuth, deleteMessage);
 
 export default conversationRouter;
+
+
+export const attachIO = (io: Server) => {
+  conversationRouter.use((req, _res, next) => {
+    req.app.set('io', io);
+    next();
+  });
+};
