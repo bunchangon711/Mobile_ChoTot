@@ -84,14 +84,18 @@ export const sendChatMessage: RequestHandler = async (req, res) => {
     imageUrl = url;
   }
 
+  // Only create chat entry if there's either content or image
+  const chatData = imageUrl 
+    ? { image: imageUrl }
+    : { content };  
+
   const conversation = await ConversationModel.findByIdAndUpdate(
     conversationId,
     {
       $push: {
         chats: {
           sentBy: req.user.id,
-          content,
-          image: imageUrl,
+          ...chatData,
           timestamp: new Date(),
         },
       },
