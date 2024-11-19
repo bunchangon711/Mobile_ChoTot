@@ -87,68 +87,63 @@ export const sendChatMessage: RequestHandler = async (req, res) => {
   if (!isValidObjectId(conversationId)) 
     return sendErrorRes(res, "Invalid conversation id!", 422);
 
-  let imageUrl;
-  if (imageFile) {
-    const { url } = await uploadImage(imageFile.filepath);
-    imageUrl = url;
-  }
-
-  const chatData = {
-    ...(imageUrl && { image: imageUrl }),
-    content: content || ''
-  };
-
-  const conversation = await ConversationModel.findById(conversationId)
-    .populate('participants');
-
-  if (!conversation) return sendErrorRes(res, "Conversation not found!", 404);
-
-  const updatedConversation = await ConversationModel.findByIdAndUpdate(
-    conversationId,
-    {
-      $push: {
-        chats: {
-          sentBy: req.user.id,
-          ...chatData,
-          timestamp: new Date(),
-        },
-      },
-    },
-    { new: true }
-  );
-
-  if (!updatedConversation) return sendErrorRes(res, "Failed to update conversation", 500);
-
-  const messageData = {
-    id: updatedConversation.chats[updatedConversation.chats.length - 1]._id,
-    text: content || '',
-    time: new Date().toISOString(),
-    image: imageUrl,
-    viewed: false,
-    user: {
-      id: typedUser.id,
-      name: typedUser.name,
-      avatar: typedUser.avatar?.url
+  try {
+    let imageUrl;
+    if (imageFile) {
+      const { url } = await uploadImage(imageFile.filepath);
+      imageUrl = url;
     }
-  };
 
-  // Add this before the socket emit:
-  const io = req.app.get('io');
-  console.log('IO instance:', io);
+    const chatData = {
+      sentBy: req.user.id,
+      content: content || '',
+      image: imageUrl,
+      timestamp: new Date(),
+      viewed: false
+    };
 
-  if (io) {
-    io.emit('new_message', {
-      message: messageData,
-      from: {
+    const updatedConversation = await ConversationModel.findByIdAndUpdate(
+      conversationId,
+      { $push: { chats: chatData } },
+      { new: true }
+    ).populate('chats.sentBy', 'name avatar.url');
+
+    if (!updatedConversation) 
+      return sendErrorRes(res, "Failed to update conversation", 500);
+
+    const newMessage = updatedConversation.chats[updatedConversation.chats.length - 1];
+
+    const messageData = {
+      id: newMessage._id.toString(),
+      text: content || '',
+      time: newMessage.timestamp.toISOString(),
+      image: imageUrl,
+      viewed: false,
+      user: {
         id: typedUser.id,
         name: typedUser.name,
         avatar: typedUser.avatar?.url
-      },
-      conversationId
-    });
-  }
+      }
+    };
 
-  res.json({ message: "Message sent successfully" });
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('new_message', {
+        message: messageData,
+        from: {
+          id: typedUser.id,
+          name: typedUser.name,
+          avatar: typedUser.avatar?.url
+        },
+        conversationId
+      });
+    }
+
+    res.json({ message: messageData });
+  } catch (error) {
+    console.error('Send message error:', error);
+    return sendErrorRes(res, "Failed to send message", 500);
+  }
 };
 
 
