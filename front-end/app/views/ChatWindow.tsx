@@ -83,34 +83,32 @@ const ChatWindow: FC<Props> = ({ route }) => {
 
   const profile = authState.profile;
 
-  const handleOnMessageSend = async (messages: IMessage[]) => {
+  const handleOnMessageSend = (messages: IMessage[]) => {
     if (!profile) return;
-  
+
     const currentMessage = messages[messages.length - 1];
-    
-    const formData = new FormData();
-    if (currentMessage.image) {
-      formData.append('image', {
-        uri: currentMessage.image,
-        type: 'image/jpeg',
-        name: 'chat-image.jpg',
-      } as any);
-    }
-    formData.append('content', currentMessage.text);
-  
-    const res = await runAxiosAsync(
-      authClient.post(`/conversation/message/${conversationId}`, formData, {
-        headers: {'Content-Type': 'multipart/form-data'},
-      })
-    );
-  
-    if (res?.message) {
-      dispatch(updateConversation({
-        conversationId,
-        chat: res.message,
-        peerProfile,
-      }));
-    }
+
+    const newMessage: OutGoingMessage = {
+      message: {
+        id: currentMessage._id.toString(),
+        text: currentMessage.text,
+        time: getTime(currentMessage.createdAt),
+        user: { id: profile.id, name: profile.name, avatar: profile.avatar },
+        image: currentMessage.image // Add this
+      },
+      conversationId,
+      to: peerProfile.id,
+    };
+
+    // this will update our store and also update the UI
+    dispatch(updateConversation({
+      conversationId,
+      chat: { ...newMessage.message, viewed: false },
+      peerProfile,
+    }));
+
+    // sending message to our api
+    socket.emit("chat:new", newMessage);
   };
 
   const pickImage = async () => {
@@ -222,22 +220,6 @@ const ChatWindow: FC<Props> = ({ route }) => {
       return () => socket.off("chat:message", updateSeenStatus);
     }, [])
   );
-
-  useEffect(() => {
-    socket.on('new_message', (data: NewMessageResponse) => {
-      if (data.conversationId === conversationId) {
-        dispatch(updateConversation({
-          conversationId: data.conversationId,
-          chat: data.message,
-          peerProfile: data.from
-        }));
-      }
-    });
-
-    return () => {
-      socket.off('new_message');
-    };
-  }, [conversationId]);
 
   if (!profile) return null;
 
