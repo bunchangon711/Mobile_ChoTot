@@ -6,6 +6,7 @@ import { sendErrorRes } from "src/utils/helper";
 import { uploadImage } from "src/cloud/index";
 import { File } from "formidable";
 import { Request } from 'express';
+import { cloudApi } from "src/cloud/index";
 
 interface UserProfile {
   id: string;
@@ -157,15 +158,41 @@ export const deleteMessage: RequestHandler = async (req, res) => {
   if (!isValidObjectId(conversationId) || !isValidObjectId(messageId))
     return sendErrorRes(res, "Invalid ids!", 422);
 
-  const conversation = await ConversationModel.findOneAndUpdate(
-    { _id: conversationId, "chats._id": messageId, "chats.sentBy": req.user.id },
-    { $pull: { chats: { _id: messageId } } },
-    { new: true }
-  );
+  try {
+    // Find message before deletion to get image info
+    const conversation = await ConversationModel.findOne(
+      { _id: conversationId, "chats._id": messageId, "chats.sentBy": req.user.id }
+    );
 
-  if (!conversation) return sendErrorRes(res, "Message not found or unauthorized!", 404);
-  
-  res.json({ message: "Message deleted successfully" });
+    if (!conversation) return sendErrorRes(res, "Message not found or unauthorized!", 404);
+
+    const message = conversation.chats.find(chat => chat._id.toString() === messageId);
+    
+    // Delete from Cloudinary if message has image
+    if (message?.image) {
+      const publicId = message.image.split('/').pop()?.split('.')[0];
+      if (publicId) {
+        const cloudDeleteResult = await cloudApi.delete_resources([publicId]);
+        if (cloudDeleteResult.deleted[publicId] !== 'deleted') {
+          throw new Error('Failed to delete image from Cloudinary');
+        }
+      }
+    }
+
+    // Delete message from MongoDB only if Cloudinary deletion succeeded
+    const updatedConversation = await ConversationModel.findOneAndUpdate(
+      { _id: conversationId },
+      { $pull: { chats: { _id: messageId } } },
+      { new: true }
+    );
+
+    if (!updatedConversation) throw new Error('Failed to delete message from MongoDB');
+    
+    res.json({ message: "Message deleted successfully" });
+  } catch (error) {
+    console.error('Delete message error:', error);
+    return sendErrorRes(res, "Failed to delete message completely", 500);
+  }
 };
 
 export const getConversations: RequestHandler = async (req, res) => {
