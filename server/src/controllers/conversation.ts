@@ -5,6 +5,8 @@ import UserModel from "src/models/user";
 import { sendErrorRes } from "src/utils/helper";
 import { uploadImage } from "src/cloud/index";
 import { File } from "formidable";
+import { Request } from 'express';
+import { cloudApi } from "src/cloud/index";
 
 interface UserProfile {
   id: string;
@@ -40,6 +42,12 @@ type PopulatedParticipant = {
   avatar?: { url: string };
 };
 
+type PopulatedUser = {
+  id: string;
+  name: string;
+  avatar?: { url: string };
+}
+
 export const getOrCreateConversation: RequestHandler = async (req, res) => {
   const { peerId } = req.params;
 
@@ -74,6 +82,7 @@ export const sendChatMessage: RequestHandler = async (req, res) => {
   const { conversationId } = req.params;
   const { content } = req.body;
   const imageFile = req.files?.image as File;
+  const typedUser = req.user as unknown as PopulatedUser;
 
   if (!isValidObjectId(conversationId)) 
     return sendErrorRes(res, "Invalid conversation id!", 422);
@@ -84,14 +93,23 @@ export const sendChatMessage: RequestHandler = async (req, res) => {
     imageUrl = url;
   }
 
-  const conversation = await ConversationModel.findByIdAndUpdate(
+  const chatData = {
+    ...(imageUrl && { image: imageUrl }),
+    content: content || ''
+  };
+
+  const conversation = await ConversationModel.findById(conversationId)
+    .populate('participants');
+
+  if (!conversation) return sendErrorRes(res, "Conversation not found!", 404);
+
+  const updatedConversation = await ConversationModel.findByIdAndUpdate(
     conversationId,
     {
       $push: {
         chats: {
           sentBy: req.user.id,
-          content,
-          image: imageUrl,
+          ...chatData,
           timestamp: new Date(),
         },
       },
@@ -99,10 +117,40 @@ export const sendChatMessage: RequestHandler = async (req, res) => {
     { new: true }
   );
 
-  if (!conversation) return sendErrorRes(res, "Conversation not found!", 404);
+  if (!updatedConversation) return sendErrorRes(res, "Failed to update conversation", 500);
+
+  const messageData = {
+    id: updatedConversation.chats[updatedConversation.chats.length - 1]._id,
+    text: content || '',
+    time: new Date().toISOString(),
+    image: imageUrl,
+    viewed: false,
+    user: {
+      id: typedUser.id,
+      name: typedUser.name,
+      avatar: typedUser.avatar?.url
+    }
+  };
+
+  // Add this before the socket emit:
+  const io = req.app.get('io');
+  console.log('IO instance:', io);
+
+  if (io) {
+    io.emit('new_message', {
+      message: messageData,
+      from: {
+        id: typedUser.id,
+        name: typedUser.name,
+        avatar: typedUser.avatar?.url
+      },
+      conversationId
+    });
+  }
 
   res.json({ message: "Message sent successfully" });
 };
+
 
 export const deleteMessage: RequestHandler = async (req, res) => {
   const { conversationId, messageId } = req.params;
@@ -110,15 +158,41 @@ export const deleteMessage: RequestHandler = async (req, res) => {
   if (!isValidObjectId(conversationId) || !isValidObjectId(messageId))
     return sendErrorRes(res, "Invalid ids!", 422);
 
-  const conversation = await ConversationModel.findOneAndUpdate(
-    { _id: conversationId, "chats._id": messageId, "chats.sentBy": req.user.id },
-    { $pull: { chats: { _id: messageId } } },
-    { new: true }
-  );
+  try {
+    // Find message before deletion to get image info
+    const conversation = await ConversationModel.findOne(
+      { _id: conversationId, "chats._id": messageId, "chats.sentBy": req.user.id }
+    );
 
-  if (!conversation) return sendErrorRes(res, "Message not found or unauthorized!", 404);
-  
-  res.json({ message: "Message deleted successfully" });
+    if (!conversation) return sendErrorRes(res, "Message not found or unauthorized!", 404);
+
+    const message = conversation.chats.find(chat => chat._id.toString() === messageId);
+    
+    // Delete from Cloudinary if message has image
+    if (message?.image) {
+      const publicId = message.image.split('/').pop()?.split('.')[0];
+      if (publicId) {
+        const cloudDeleteResult = await cloudApi.delete_resources([publicId]);
+        if (cloudDeleteResult.deleted[publicId] !== 'deleted') {
+          throw new Error('Failed to delete image from Cloudinary');
+        }
+      }
+    }
+
+    // Delete message from MongoDB only if Cloudinary deletion succeeded
+    const updatedConversation = await ConversationModel.findOneAndUpdate(
+      { _id: conversationId },
+      { $pull: { chats: { _id: messageId } } },
+      { new: true }
+    );
+
+    if (!updatedConversation) throw new Error('Failed to delete message from MongoDB');
+    
+    res.json({ message: "Message deleted successfully" });
+  } catch (error) {
+    console.error('Delete message error:', error);
+    return sendErrorRes(res, "Failed to delete message completely", 500);
+  }
 };
 
 export const getConversations: RequestHandler = async (req, res) => {

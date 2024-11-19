@@ -127,10 +127,6 @@ const ChatWindow: FC<Props> = ({ route }) => {
         name: 'chat-image.jpg',
       } as any);
       
-      formData.append('content', ''); // Add space instead of empty string
-
-      console.log('Sending image:', imageUri); // Add logging
-      
       const res = await runAxiosAsync(
         authClient.post(`/conversation/message/${conversationId}`, formData, {
           headers: {'Content-Type': 'multipart/form-data'},
@@ -138,8 +134,22 @@ const ChatWindow: FC<Props> = ({ route }) => {
       );
       
       if(res?.message) {
-        console.log('Server response:', res); // Add logging
-        await fetchOldChats(); // Refresh chat after image upload
+        dispatch(updateConversation({
+          conversationId,
+          chat: {
+            id: Math.random().toString(),
+            time: new Date().toISOString(),
+            text: '',
+            image: imageUri,
+            viewed: false,
+            user: {
+              id: profile!.id,
+              name: profile!.name,
+              avatar: profile!.avatar
+            }
+          },
+          peerProfile,
+        }));
       }
     }
   };

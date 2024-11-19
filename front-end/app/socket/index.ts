@@ -67,6 +67,28 @@ export const handleSocketConnection = (
     dispatch(updateChatViewed(seenData));
   });
 
+  socket.on('new_message', (data) => {
+    if (!data.message || !data.from || !data.conversationId) return;
+    
+    dispatch(
+      updateConversation({
+        conversationId: data.conversationId,
+        chat: data.message,
+        peerProfile: data.from
+      })
+    );
+  
+    dispatch(
+      updateActiveChat({
+        id: data.conversationId,
+        lastMessage: data.message.text || '',
+        peerProfile: data.from,
+        timestamp: data.message.time,
+        unreadChatCounts: 1
+      })
+    );
+  });
+  
   socket.on("connect_error", async (error) => {
     if (error.message === "jwt expired") {
       const refreshToken = await asyncStorage.get(Keys.REFRESH_TOKEN);
