@@ -92,9 +92,10 @@ export const sendChatMessage: RequestHandler = async (req, res) => {
     imageUrl = url;
   }
 
-  const chatData = imageUrl 
-    ? { image: imageUrl, content: '' }
-    : { content };  
+  const chatData = {
+    ...(imageUrl && { image: imageUrl }),
+    content: content || ''
+  };
 
   const conversation = await ConversationModel.findById(conversationId)
     .populate('participants');
