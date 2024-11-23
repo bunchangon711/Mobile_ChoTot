@@ -19,6 +19,10 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   path: "/socket-message",
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
 });
 
 app.use(morgan("dev"));
