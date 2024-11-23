@@ -35,9 +35,26 @@ type SeenData = {
 
 export const handleSocketConnection = (
   profile: Profile,
-  dispatch: Dispatch<UnknownAction>
+  dispatch: Dispatch<UnknownAction>,
+  conversationId?: string
 ) => {
+  if (!profile || !conversationId) {
+    console.log('Missing required data:', { hasProfile: !!profile, conversationId });
+    return () => {};
+  }
+
+  let currentRoom = '';
+  
+  console.log('Setting up socket connection...', { conversationId });
   socket.auth = { token: profile.accessToken };
+  
+  // Clean up before new connection
+  if (socket.connected) {
+    console.log('Cleaning up existing connection...');
+    socket.disconnect();
+  }
+  
+  socket.removeAllListeners();
   socket.connect();
 
   socket.on("chat:message", (data: NewMessageResponse) => {
@@ -67,26 +84,41 @@ export const handleSocketConnection = (
     dispatch(updateChatViewed(seenData));
   });
 
-  socket.on('new_message', (data) => {
+  socket.on("connect", () => {
+    console.log('Socket connected successfully');
+    
+    if (conversationId) {
+      currentRoom = conversationId;
+      console.log(`Joining room: ${conversationId}`);
+      socket.emit('join_room', conversationId);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Socket disconnected');
+  });
+
+  socket.on('new_message', (data: NewMessageResponse) => {
+    console.log(`Received message in room ${data.conversationId}`);
     if (!data.message || !data.from || !data.conversationId) return;
     
-    dispatch(
-      updateConversation({
-        conversationId: data.conversationId,
-        chat: data.message,
-        peerProfile: data.from
-      })
-    );
-  
-    dispatch(
-      updateActiveChat({
-        id: data.conversationId,
-        lastMessage: data.message.text || '',
-        peerProfile: data.from,
-        timestamp: data.message.time,
-        unreadChatCounts: 1
-      })
-    );
+    dispatch(updateConversation({
+      conversationId: data.conversationId,
+      chat: data.message,
+      peerProfile: data.from
+    }));
+    
+    dispatch(updateActiveChat({
+      id: data.conversationId,
+      lastMessage: data.message.text || '',
+      peerProfile: data.from,
+      timestamp: data.message.time,
+      unreadChatCounts: 1
+    }));
+  });
+
+  socket.on('error', (error) => {
+    console.error('Socket error:', error);
   });
   
   socket.on("connect_error", async (error) => {
@@ -110,6 +142,15 @@ export const handleSocketConnection = (
       }
     }
   });
+
+  return () => {
+    console.log('Cleaning up socket connection for room:', currentRoom);
+    if (currentRoom) {
+      socket.emit('leave_room', currentRoom);
+    }
+    socket.removeAllListeners();
+    socket.disconnect();
+  };
 };
 
 export default socket;
