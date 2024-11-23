@@ -2,6 +2,7 @@ import { createSelector, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from ".";
 
 
+
 interface UserProfile {
   id: string;
   name: string;
@@ -22,6 +23,8 @@ export interface Conversation {
   chats: Chat[];
   peerProfile: { avatar?: string; name: string; id: string };
 }
+
+
 
 type UpdatePayload = {
   chat: Chat;
@@ -71,14 +74,21 @@ const slice = createSlice({
       const index = conversations.findIndex(
         ({ id }) => id === payload.conversationId
       );
+      
       if (index === -1) {
-        // we have to create new conversation because there is no conversation with this id
         conversations.push({
           id: payload.conversationId,
           chats: [payload.chat],
           peerProfile: payload.peerProfile,
         });
-      } else {
+        return;
+      }
+
+      const existingChat = conversations[index].chats.find(
+        chat => chat.id === payload.chat.id
+      );
+
+      if (!existingChat) {
         conversations[index].chats.push(payload.chat);
       }
     },

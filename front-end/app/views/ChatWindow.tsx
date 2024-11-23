@@ -92,7 +92,7 @@ const ChatWindow: FC<Props> = ({ route }) => {
 
   const handleOnMessageSend = async (messages: IMessage[]) => {
     if (!profile) return;
-    const currentMessage = messages[messages.length - 1];
+    const currentMessage = messages[0];
     
     const formData = new FormData();
     if (currentMessage.image) {
@@ -111,11 +111,17 @@ const ChatWindow: FC<Props> = ({ route }) => {
     );
   
     if (res?.message) {
+      // Only update local state, let socket handle peer updates
       dispatch(updateConversation({
         conversationId,
-        chat: res.message,
+        chat: {
+          ...res.message,
+          _id: res.message.id // Ensure consistent ID usage
+        },
         peerProfile,
       }));
+      
+      // Emit to socket for peer updates
       socket.emit('send_message', {
         conversationId,
         message: res.message,
@@ -132,35 +138,22 @@ const ChatWindow: FC<Props> = ({ route }) => {
   
     if (!result.canceled && result.assets[0]) {
       const formData = new FormData();
-      const imageUri = result.assets[0].uri;
-      
       formData.append('image', {
-        uri: imageUri,
-        type: 'image/jpeg', 
+        uri: result.assets[0].uri,
+        type: 'image/jpeg',
         name: 'chat-image.jpg',
       } as any);
-      
+  
       const res = await runAxiosAsync(
         authClient.post(`/conversation/message/${conversationId}`, formData, {
           headers: {'Content-Type': 'multipart/form-data'},
         })
       );
-      
-      if(res?.message) {
+  
+      if (res?.message) {
         dispatch(updateConversation({
           conversationId,
-          chat: {
-            id: Math.random().toString(),
-            time: new Date().toISOString(),
-            text: '',
-            image: imageUri,
-            viewed: false,
-            user: {
-              id: profile!.id,
-              name: profile!.name,
-              avatar: profile!.avatar
-            }
-          },
+          chat: res.message, // Use server-generated message
           peerProfile,
         }));
       }
@@ -235,18 +228,19 @@ const ChatWindow: FC<Props> = ({ route }) => {
   );
 
   useEffect(() => {
-    socket.on('new_message', (data: NewMessageResponse) => {
-      if (data.conversationId === conversationId) {
+    const messageHandler = (data: NewMessageResponse) => {
+      if (data.conversationId === conversationId && data.message?.id) {
         dispatch(updateConversation({
           conversationId: data.conversationId,
           chat: data.message,
           peerProfile: data.from
         }));
       }
-    });
-
+    };
+  
+    socket.on('new_message', messageHandler);
     return () => {
-      socket.off('new_message');
+      socket.off('new_message', messageHandler);
     };
   }, [conversationId]);
 

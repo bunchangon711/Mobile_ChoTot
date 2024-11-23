@@ -93,42 +93,67 @@ type SeenData = {
 io.on("connection", (socket) => {
   const socketData = socket.data as { jwtDecode: { id: string } };
   const userId = socketData.jwtDecode.id;
+  
+  console.log(`User ${userId} connected`);
 
-  socket.join(userId);
-
-  // console.log("user is connected");
-  socket.on("chat:new", async (data: IncomingMessage) => {
-    const { conversationId, to, message } = data;
-
-    await ConversationModel.findByIdAndUpdate(conversationId, {
-      $push: {
-        chats: {
-          sentBy: message.user.id,
-          content: message.text,
-          timestamp: message.time,
-        },
-      },
-    });
-
-    const messageResponse: OutgoingMessageResponse = {
-      from: message.user,
-      conversationId,
-      message: { ...message, viewed: false },
-    };
-
-    socket.to(to).emit("chat:message", messageResponse);
+  socket.on('join_room', (conversationId) => {
+    socket.join(conversationId);
+    console.log(`User ${userId} joined room ${conversationId}`);
   });
 
-  socket.on(
-    "chat:seen",
-    async ({ conversationId, messageId, peerId }: SeenData) => {
-      await updateSeenStatus(peerId, conversationId);
-      socket.to(peerId).emit("chat:seen", { conversationId, messageId });
-    }
-  );
+  socket.on('leave_room', (conversationId) => {
+    socket.leave(conversationId);
+    console.log(`User ${userId} left room ${conversationId}`);
+  });
 
-  socket.on("chat:typing", (typingData: { to: string; active: boolean }) => {
-    socket.to(typingData.to).emit("chat:typing", { typing: typingData.active });
+  socket.on('send_message', async (data: IncomingMessage) => {
+    const { conversationId, message } = data;
+    
+    try {
+      // Update database through controller
+      await ConversationModel.findByIdAndUpdate(conversationId, {
+        $push: {
+          chats: {
+            sentBy: message.user.id,
+            content: message.text,
+            timestamp: message.time,
+          },
+        },
+      });
+
+      // Broadcast to room
+      io.to(conversationId).emit('new_message', {
+        from: message.user,
+        conversationId,
+        message: { ...message, viewed: false },
+      });
+
+      console.log(`Message sent in room ${conversationId}`);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      socket.emit('error', 'Failed to send message');
+    }
+  });
+
+  socket.on('chat:seen', async ({ conversationId, messageId, peerId }: SeenData) => {
+    try {
+      await updateSeenStatus(peerId, conversationId);
+      io.to(conversationId).emit('chat:seen', { conversationId, messageId });
+      console.log(`Message ${messageId} marked as seen in room ${conversationId}`);
+    } catch (error) {
+      console.error('Error updating seen status:', error);
+    }
+  });
+
+  socket.on('chat:typing', ({ conversationId, active }: { conversationId: string, active: boolean }) => {
+    socket.to(conversationId).emit('chat:typing', {
+      userId,
+      typing: active
+    });
+  });
+
+  socket.on('disconnect', () => {
+    console.log(`User ${userId} disconnected`);
   });
 });
 

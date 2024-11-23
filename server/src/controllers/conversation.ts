@@ -128,7 +128,6 @@ export const sendChatMessage: RequestHandler = async (req, res) => {
 
     const io = req.app.get('io');
     if (io) {
-      // Emit to specific room based on conversationId
       io.to(conversationId).emit('new_message', {
         message: messageData,
         from: {
@@ -139,7 +138,7 @@ export const sendChatMessage: RequestHandler = async (req, res) => {
         conversationId
       });
     }
-
+  
     res.json({ message: messageData });
   } catch (error) {
     console.error('Send message error:', error);
