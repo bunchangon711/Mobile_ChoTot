@@ -8,7 +8,14 @@ import { updateActiveChat } from "app/store/chats";
 import { updateChatViewed, updateConversation } from "app/store/conversation";
 import { io } from "socket.io-client";
 
-const socket = io(baseURL, { path: "/socket-message", autoConnect: false });
+const socket = io(baseURL, { 
+  path: "/socket-message", 
+  autoConnect: false,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  timeout: 10000,
+  transports: ['websocket'],  // Try forcing websocket transport
+});
 
 type MessageProfile = {
   id: string;
@@ -44,61 +51,9 @@ export const handleSocketConnection = (
   }
 
   let currentRoom = '';
+  let reconnectAttempts = 0;
   
-  console.log('Setting up socket connection...', { conversationId });
-  socket.auth = { token: profile.accessToken };
-  
-  // Clean up before new connection
-  if (socket.connected) {
-    console.log('Cleaning up existing connection...');
-    socket.disconnect();
-  }
-  
-  socket.removeAllListeners();
-  socket.connect();
-
-  socket.on("chat:message", (data: NewMessageResponse) => {
-    const { conversationId, from, message } = data;
-    // this will update on going conversation or messages in between two users
-    dispatch(
-      updateConversation({
-        conversationId,
-        chat: message,
-        peerProfile: from,
-      })
-    );
-
-    // this will update active chats and updates chats screen
-    dispatch(
-      updateActiveChat({
-        id: data.conversationId,
-        lastMessage: data.message.text,
-        peerProfile: data.message.user,
-        timestamp: data.message.time,
-        unreadChatCounts: 1,
-      })
-    );
-  });
-
-  socket.on("chat:seen", (seenData: SeenData) => {
-    dispatch(updateChatViewed(seenData));
-  });
-
-  socket.on("connect", () => {
-    console.log('Socket connected successfully');
-    
-    if (conversationId) {
-      currentRoom = conversationId;
-      console.log(`Joining room: ${conversationId}`);
-      socket.emit('join_room', conversationId);
-    }
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Socket disconnected');
-  });
-
-  socket.on('new_message', (data: NewMessageResponse) => {
+  const handleMessage = (data: NewMessageResponse) => {
     console.log(`Received message in room ${data.conversationId}`);
     if (!data.message || !data.from || !data.conversationId) return;
     
@@ -115,38 +70,101 @@ export const handleSocketConnection = (
       timestamp: data.message.time,
       unreadChatCounts: 1
     }));
-  });
+  };
 
-  socket.on('error', (error) => {
-    console.error('Socket error:', error);
-  });
-  
-  socket.on("connect_error", async (error) => {
-    if (error.message === "jwt expired") {
-      const refreshToken = await asyncStorage.get(Keys.REFRESH_TOKEN);
-      const res = await runAxiosAsync<TokenResponse>(
-        client.post(`${baseURL}/auth/refresh-token`, { refreshToken })
-      );
-
-      if (res) {
-        await asyncStorage.save(Keys.AUTH_TOKEN, res.tokens.access);
-        await asyncStorage.save(Keys.REFRESH_TOKEN, res.tokens.refresh);
-        dispatch(
-          updateAuthState({
-            profile: { ...profile, accessToken: res.tokens.access },
-            pending: false,
-          })
-        );
-        socket.auth = { token: res.tokens.access };
-        socket.connect();
-      }
+  const setupConnection = () => {
+    console.log('Setting up socket connection with token:', !!profile.accessToken); // Add debug log
+    socket.auth = { token: profile.accessToken };
+    
+    if (socket.connected) {
+      console.log('Socket already connected, disconnecting...'); // Add debug log
+      socket.disconnect();
     }
-  });
+    
+    socket.removeAllListeners();
+    socket.connect();
+
+    socket.on("chat:message", handleMessage);
+
+    socket.on("new_message", (data: NewMessageResponse) => {
+      console.log('Received new message:', data); // Add debug log
+      handleMessage(data);
+    });
+
+    socket.on("chat:seen", (seenData: SeenData) => {
+      dispatch(updateChatViewed(seenData));
+    });
+
+    socket.on("connect", () => {
+      console.log('Socket connected successfully, joining room:', conversationId);
+      reconnectAttempts = 0;
+      
+      if (conversationId) {
+        currentRoom = conversationId;
+        socket.emit('join_room', conversationId, (response: { success: boolean }) => {
+          console.log('Join room response:', response); // Add debug log
+          if (response.success) {
+            console.log(`Successfully joined room: ${conversationId}`);
+          } else {
+            console.error(`Failed to join room: ${conversationId}`);
+          }
+        });
+      }
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Socket disconnected');
+      if (reconnectAttempts < 5) {
+        setTimeout(() => {
+          reconnectAttempts++;
+          console.log(`Attempting reconnection ${reconnectAttempts}/5`);
+          setupConnection();
+        }, 1000 * reconnectAttempts);
+      }
+    });
+
+    socket.on('error', (error) => {
+      console.error('Socket error:', error);
+    });
+    
+    socket.on("connect_error", async (error) => {
+      if (error.message === "jwt expired") {
+        try {
+          const refreshToken = await asyncStorage.get(Keys.REFRESH_TOKEN);
+          const res = await runAxiosAsync<TokenResponse>(
+            client.post(`${baseURL}/auth/refresh-token`, { refreshToken })
+          );
+
+          if (res) {
+            await asyncStorage.save(Keys.AUTH_TOKEN, res.tokens.access);
+            await asyncStorage.save(Keys.REFRESH_TOKEN, res.tokens.refresh);
+            dispatch(
+              updateAuthState({
+                profile: { ...profile, accessToken: res.tokens.access },
+                pending: false,
+              })
+            );
+            socket.auth = { token: res.tokens.access };
+            socket.connect();
+          }
+        } catch (err) {
+          console.error('Token refresh failed:', err);
+        }
+      }
+    });
+  };
+
+  setupConnection();
 
   return () => {
-    console.log('Cleaning up socket connection for room:', currentRoom);
     if (currentRoom) {
-      socket.emit('leave_room', currentRoom);
+      socket.emit('leave_room', currentRoom, (response: { success: boolean }) => {
+        if (response.success) {
+          console.log(`Successfully left room: ${currentRoom}`);
+        } else {
+          console.error(`Failed to leave room: ${currentRoom}`);
+        }
+      });
     }
     socket.removeAllListeners();
     socket.disconnect();

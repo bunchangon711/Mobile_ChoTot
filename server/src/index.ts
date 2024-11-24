@@ -94,11 +94,13 @@ io.on("connection", (socket) => {
   const socketData = socket.data as { jwtDecode: { id: string } };
   const userId = socketData.jwtDecode.id;
   
-  console.log(`User ${userId} connected`);
+  console.log(`User ${userId} connected with socket ID: ${socket.id}`);
 
   socket.on('join_room', (conversationId) => {
+    console.log(`User ${userId} attempting to join room ${conversationId}`);
     socket.join(conversationId);
-    console.log(`User ${userId} joined room ${conversationId}`);
+    console.log(`User ${userId} successfully joined room ${conversationId}`);
+    socket.emit('join_room', { success: true });
   });
 
   socket.on('leave_room', (conversationId) => {
@@ -152,8 +154,8 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on('disconnect', () => {
-    console.log(`User ${userId} disconnected`);
+  socket.on('disconnect', (reason) => {
+    console.log(`User ${userId} disconnected. Reason: ${reason}`);
   });
 });
 

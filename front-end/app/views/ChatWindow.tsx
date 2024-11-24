@@ -85,9 +85,15 @@ const ChatWindow: FC<Props> = ({ route }) => {
 
   useEffect(() => {
     if (!profile || !conversationId) return;
-    console.log('Initializing socket with:', { profileId: profile.id, conversationId });
+    
+    console.log('Setting up socket connection...'); // Add debug log
+    
     const cleanup = handleSocketConnection(profile, dispatch, conversationId);
-    return cleanup;
+    
+    return () => {
+      console.log('Cleaning up socket connection...'); // Add debug log
+      cleanup();
+    };
   }, [profile, conversationId]);
 
   const handleOnMessageSend = async (messages: IMessage[]) => {
@@ -110,23 +116,22 @@ const ChatWindow: FC<Props> = ({ route }) => {
       })
     );
   
-    if (res?.message) {
-      // Only update local state, let socket handle peer updates
-      dispatch(updateConversation({
-        conversationId,
-        chat: {
-          ...res.message,
-          _id: res.message.id // Ensure consistent ID usage
-        },
-        peerProfile,
-      }));
-      
-      // Emit to socket for peer updates
-      socket.emit('send_message', {
-        conversationId,
-        message: res.message,
-        to: peerProfile.id
-      });
+    try {
+      const res = await runAxiosAsync(
+        authClient.post(`/conversation/message/${conversationId}`, formData, {
+          headers: {'Content-Type': 'multipart/form-data'},
+        })
+      );
+  
+      if (res?.message) {
+        socket.emit('send_message', {
+          message: res.message,
+          conversationId,
+          to: peerProfile.id
+        });
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
     }
   };
 
@@ -227,22 +232,22 @@ const ChatWindow: FC<Props> = ({ route }) => {
     }, [])
   );
 
-  useEffect(() => {
-    const messageHandler = (data: NewMessageResponse) => {
-      if (data.conversationId === conversationId && data.message?.id) {
-        dispatch(updateConversation({
-          conversationId: data.conversationId,
-          chat: data.message,
-          peerProfile: data.from
-        }));
-      }
-    };
+  // useEffect(() => {
+  //   const messageHandler = (data: NewMessageResponse) => {
+  //     if (data.conversationId === conversationId && data.message?.id) {
+  //       dispatch(updateConversation({
+  //         conversationId: data.conversationId,
+  //         chat: data.message,
+  //         peerProfile: data.from
+  //       }));
+  //     }
+  //   };
   
-    socket.on('new_message', messageHandler);
-    return () => {
-      socket.off('new_message', messageHandler);
-    };
-  }, [conversationId]);
+  //   socket.on('new_message', messageHandler);
+  //   return () => {
+  //     socket.off('new_message', messageHandler);
+  //   };
+  // }, [conversationId]);
 
   if (!profile) return null;
 
