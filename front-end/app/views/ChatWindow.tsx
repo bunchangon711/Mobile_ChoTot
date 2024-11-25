@@ -120,33 +120,24 @@ const ChatWindow: FC<Props> = ({ route }) => {
     if (!profile) return;
     const currentMessage = messages[0];
     
-    const formData = new FormData();
-    if (currentMessage.image) {
-      formData.append('image', {
-        uri: currentMessage.image,
-        type: 'image/jpeg',
-        name: 'chat-image.jpg',
-      } as any);
-    }
-    formData.append('content', currentMessage.text);
-  
-    try {
-      const res = await runAxiosAsync(
-        authClient.post(`/conversation/message/${conversationId}`, formData, {
-          headers: {'Content-Type': 'multipart/form-data'},
-        })
-      );
-  
-      if (res?.message) {
-        socket.emit('send_message', {
-          message: res.message,
-          conversationId,
-          to: peerProfile.id
-        });
+    const tempMessage = {
+      id: currentMessage._id.toString(),
+      text: currentMessage.text,
+      time: new Date().toISOString(),
+      viewed: false,
+      user: {
+        id: profile.id,
+        name: profile.name,
+        avatar: profile.avatar
       }
-    } catch (error) {
-      console.error('Error sending message:', error);
-    }
+    };
+  
+    // Emit directly through socket
+    socket.emit('send_message', {
+      message: tempMessage,
+      conversationId,
+      to: peerProfile.id
+    });
   };  
 
   const pickImage = async () => {
