@@ -7,6 +7,7 @@ import { Profile, updateAuthState } from "app/store/auth";
 import { updateActiveChat } from "app/store/chats";
 import { updateChatViewed, updateConversation } from "app/store/conversation";
 import { io } from "socket.io-client";
+import * as Notifications from 'expo-notifications';
 
 const socket = io(baseURL, { 
   path: "/socket-message", 
@@ -70,8 +71,23 @@ export const handleSocketConnection = (
       timestamp: data.message.time,
       unreadChatCounts: 1
     }));
-  };
 
+    // Only show notification if sender is not current user
+    if (data.from.id !== profile.id) {
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title: data.from.name,
+          body: data.message.text || 'New message',
+          data: { 
+            conversationId: data.conversationId,
+            peerProfile: data.from
+          },
+        },
+        trigger: null,
+      });
+    }
+  };
+  
   const setupConnection = () => {
     console.log('Setting up socket connection with token:', !!profile.accessToken); // Add debug log
     socket.auth = { token: profile.accessToken };

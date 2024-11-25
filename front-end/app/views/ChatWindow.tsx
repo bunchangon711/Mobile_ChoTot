@@ -29,6 +29,10 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Alert } from 'react-native';
 import ImageView from "react-native-image-viewing";
 import EmojiSelector from 'react-native-emoji-selector';
+import * as Notifications from 'expo-notifications';
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+
 
 type Props = NativeStackScreenProps<AppStackParamList, "ChatWindow">;
 
@@ -80,6 +84,8 @@ const ChatWindow: FC<Props> = ({ route }) => {
   const [fetchingChats, setFetchingChats] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+
 
   const profile = authState.profile;
 
@@ -95,6 +101,20 @@ const ChatWindow: FC<Props> = ({ route }) => {
       cleanup();
     };
   }, [profile, conversationId]);
+
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const notificationData = response.notification.request.content.data;
+      if (notificationData.conversationId !== route.params.conversationId) {
+        navigation.navigate('ChatWindow', {
+          conversationId: notificationData.conversationId,
+          peerProfile: notificationData.peerProfile
+        } as AppStackParamList['ChatWindow']);
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   const handleOnMessageSend = async (messages: IMessage[]) => {
     if (!profile) return;
