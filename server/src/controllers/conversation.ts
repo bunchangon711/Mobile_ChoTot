@@ -94,6 +94,20 @@ export const sendChatMessage: RequestHandler = async (req, res) => {
       imageUrl = url;
     }
 
+    // Check if identical message exists within last 2 seconds
+    const recentDuplicate = await ConversationModel.findOne({
+      _id: conversationId,
+      'chats.content': content,
+      'chats.sentBy': req.user.id,
+      'chats.timestamp': { 
+        $gte: new Date(Date.now() - 500) 
+      }
+    });
+
+    if (recentDuplicate) {
+      return res.json({ message: "Message already sent" });
+    }
+
     const chatData = {
       sentBy: req.user.id,
       content: content || '',

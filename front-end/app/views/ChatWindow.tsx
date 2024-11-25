@@ -130,12 +130,6 @@ const ChatWindow: FC<Props> = ({ route }) => {
     }
     formData.append('content', currentMessage.text);
   
-    const res = await runAxiosAsync(
-      authClient.post(`/conversation/message/${conversationId}`, formData, {
-        headers: {'Content-Type': 'multipart/form-data'},
-      })
-    );
-  
     try {
       const res = await runAxiosAsync(
         authClient.post(`/conversation/message/${conversationId}`, formData, {
@@ -153,7 +147,7 @@ const ChatWindow: FC<Props> = ({ route }) => {
     } catch (error) {
       console.error('Error sending message:', error);
     }
-  };
+  };  
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({

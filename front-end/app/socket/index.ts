@@ -100,7 +100,8 @@ export const handleSocketConnection = (
     socket.removeAllListeners();
     socket.connect();
 
-    socket.on("chat:message", handleMessage);
+    // Remove this duplicate handler in handleSocketConnection
+    // socket.on("chat:message", handleMessage);
 
     socket.on("new_message", (data: NewMessageResponse) => {
       console.log('Received new message:', data); // Add debug log
