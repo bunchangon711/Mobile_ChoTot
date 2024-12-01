@@ -18,6 +18,11 @@ import { useDispatch } from "react-redux";
 import { Product, deleteItem } from "app/store/listings";
 import ChatIcon from "@components/ChatIcon";
 import React from "react";
+import socket from "app/socket";
+import { addConversation } from "app/store/conversation";
+import { CommonActions } from "@react-navigation/native";
+
+
 type Props = NativeStackScreenProps<ProfileNavigatorParamList, "SingleProduct">;
 
 const menuOptions = [
@@ -85,38 +90,59 @@ const SingleProduct: FC<Props> = ({ route, navigation }) => {
   };
 
   const onChatBtnPress = async () => {
-    if (!productInfo) return;
+    if (!productInfo || !authState.profile) return;
   
     setFetchingChatId(true);
     const res = await runAxiosAsync<{ conversationId: string }>(
       authClient.get("/conversation/with/" + productInfo.seller.id)
     );
     setFetchingChatId(false);
-    
-    if (res) {
-      const formData = new FormData();
-      formData.append('content', `Tôi muốn mua: ${productInfo.name}\nGiá: ${productInfo.price}VND`);
-      
-      if (productInfo.thumbnail) {
-        formData.append('image', {
-          uri: productInfo.thumbnail,
-          type: 'image/jpeg',
-          name: 'product-image.jpg'
-        } as any);
-      }
   
-      await runAxiosAsync(
-        authClient.post(`/conversation/message/${res.conversationId}`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+    if (res) {
+      const messageId = Math.random().toString(36).substring(7);
+      const tempMessage = {
+        id: messageId,
+        text: `Tôi muốn mua: ${productInfo.name}\nGiá: ${productInfo.price}VND`,
+        time: new Date().toISOString(),
+        image: productInfo.thumbnail,
+        viewed: false,
+        user: {
+          id: authState.profile.id,
+          name: authState.profile.name,
+          avatar: authState.profile.avatar
+        }
+      };
+  
+      dispatch(addConversation([{
+        id: res.conversationId,
+        chats: [tempMessage],
+        peerProfile: productInfo.seller
+      }]));
+  
+      socket.emit('send_message', {
+        message: tempMessage,
+        conversationId: res.conversationId,
+        to: productInfo.seller.id
+      });
+  
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 1,
+          routes: [
+            { name: 'Home' },
+            { 
+              name: 'ChatWindow',
+              params: {
+                conversationId: res.conversationId,
+                peerProfile: productInfo.seller,
+              }
+            }
+          ],
         })
       );
-  
-      navigation.navigate("ChatWindow", {
-        conversationId: res.conversationId,
-        peerProfile: productInfo.seller,
-      });
     }
   };
+  
 
   useEffect(() => {
     if (id) fetchProductInfo(id);

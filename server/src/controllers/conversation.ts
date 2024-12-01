@@ -94,23 +94,9 @@ export const sendChatMessage: RequestHandler = async (req, res) => {
       imageUrl = url;
     }
 
-    // Check if identical message exists within last 2 seconds
-    const recentDuplicate = await ConversationModel.findOne({
-      _id: conversationId,
-      'chats.content': content,
-      'chats.sentBy': req.user.id,
-      'chats.timestamp': { 
-        $gte: new Date(Date.now() - 500) 
-      }
-    });
-
-    if (recentDuplicate) {
-      return res.json({ message: "Message already sent" });
-    }
-
     const chatData = {
       sentBy: req.user.id,
-      content: content || '',
+      content: imageUrl ? undefined : content,
       image: imageUrl,
       timestamp: new Date(),
       viewed: false
@@ -129,7 +115,7 @@ export const sendChatMessage: RequestHandler = async (req, res) => {
 
     const messageData = {
       id: newMessage._id.toString(),
-      text: content || '',
+      text: imageUrl ? undefined : content,
       time: newMessage.timestamp.toISOString(),
       image: imageUrl,
       viewed: false,
@@ -140,19 +126,6 @@ export const sendChatMessage: RequestHandler = async (req, res) => {
       }
     };
 
-    const io = req.app.get('io');
-    if (io) {
-      io.to(conversationId).emit('new_message', {
-        message: messageData,
-        from: {
-          id: typedUser.id,
-          name: typedUser.name,
-          avatar: typedUser.avatar?.url
-        },
-        conversationId
-      });
-    }
-  
     res.json({ message: messageData });
   } catch (error) {
     console.error('Send message error:', error);
@@ -164,7 +137,7 @@ export const sendChatMessage: RequestHandler = async (req, res) => {
 export const deleteMessage: RequestHandler = async (req, res) => {
   const { conversationId, messageId } = req.params;
   
-  if (!isValidObjectId(conversationId) || !isValidObjectId(messageId))
+  if (!isValidObjectId(conversationId)) 
     return sendErrorRes(res, "Invalid ids!", 422);
 
   try {
@@ -178,12 +151,13 @@ export const deleteMessage: RequestHandler = async (req, res) => {
     const message = conversation.chats.find(chat => chat._id.toString() === messageId);
     
     // Delete from Cloudinary if message has image
-    if (message?.image) {
+    if (message?.image && message.image.includes('cloudinary')) {
       const publicId = message.image.split('/').pop()?.split('.')[0];
       if (publicId) {
-        const cloudDeleteResult = await cloudApi.delete_resources([publicId]);
-        if (cloudDeleteResult.deleted[publicId] !== 'deleted') {
-          throw new Error('Failed to delete image from Cloudinary');
+        try {
+          await cloudApi.delete_resources([publicId]);
+        } catch (error) {
+          console.log('Image not found in Cloudinary, proceeding with message deletion');
         }
       }
     }

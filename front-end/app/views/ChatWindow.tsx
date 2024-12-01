@@ -143,30 +143,29 @@ const ChatWindow: FC<Props> = ({ route }) => {
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      base64: true,
       quality: 0.8,
     });
   
     if (!result.canceled && result.assets[0]) {
-      const formData = new FormData();
-      formData.append('image', {
-        uri: result.assets[0].uri,
-        type: 'image/jpeg',
-        name: 'chat-image.jpg',
-      } as any);
+      const messageId = Math.random().toString();
+      const tempMessage = {
+        id: messageId,
+        time: new Date().toISOString(),
+        viewed: false,
+        user: {
+          id: profile?.id,
+          name: profile?.name,
+          avatar: profile?.avatar
+        }
+      };
   
-      const res = await runAxiosAsync(
-        authClient.post(`/conversation/message/${conversationId}`, formData, {
-          headers: {'Content-Type': 'multipart/form-data'},
-        })
-      );
-  
-      if (res?.message) {
-        dispatch(updateConversation({
-          conversationId,
-          chat: res.message, // Use server-generated message
-          peerProfile,
-        }));
-      }
+      socket.emit('send_message', {
+        message: tempMessage,
+        conversationId,
+        to: peerProfile.id,
+        imageData: `data:image/jpeg;base64,${result.assets[0].base64}`
+      });
     }
   };
 

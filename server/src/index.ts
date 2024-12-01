@@ -14,6 +14,7 @@ import morgan from "morgan";
 import conversationRouter from "./routes/conversation";
 import ConversationModel from "./models/conversation";
 import { updateSeenStatus } from "./controllers/conversation";
+import { uploadImage } from "./cloud";
 
 const app = express();
 const server = http.createServer(app);
@@ -65,18 +66,21 @@ type IncomingMessage = {
   message: {
     id: string;
     time: string;
-    text: string;
+    text?: string;
+    image?: string;
     user: MessageProfile;
   };
   to: string;
   conversationId: string;
+  imageData?: string;
 };
 
 type OutgoingMessageResponse = {
   message: {
     id: string;
     time: string;
-    text: string;
+    text?: string;
+    image?: string;
     user: MessageProfile;
     viewed: boolean;
   };
@@ -109,27 +113,34 @@ io.on("connection", (socket) => {
   });
 
   socket.on('send_message', async (data: IncomingMessage) => {
-    const { conversationId, message } = data;
+    const { conversationId, message, imageData } = data;
     
     try {
+      let imageUrl;
+      if (imageData) {
+        const { url } = await uploadImage(imageData);
+        message.image = url;
+      }
+  
       // Update database through controller
       await ConversationModel.findByIdAndUpdate(conversationId, {
         $push: {
           chats: {
             sentBy: message.user.id,
             content: message.text,
+            image: message.image,
             timestamp: message.time,
           },
         },
       });
-
+  
       // Broadcast to room
       io.to(conversationId).emit('new_message', {
         from: message.user,
         conversationId,
         message: { ...message, viewed: false },
       });
-
+  
       console.log(`Message sent in room ${conversationId}`);
     } catch (error) {
       console.error('Error sending message:', error);
