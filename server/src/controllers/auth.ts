@@ -81,7 +81,7 @@ export const signIn: RequestHandler = async (req, res) => {
   const payload = { id: user._id };
 
   const accessToken = jwt.sign(payload, JWT_SECRET, {
-    expiresIn: "15m",
+    expiresIn: "1h",
   });
   const refreshToken = jwt.sign(payload, JWT_SECRET);
 

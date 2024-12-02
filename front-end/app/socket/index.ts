@@ -47,7 +47,6 @@ export const handleSocketConnection = (
   conversationId?: string
 ) => {
   if (!profile || !conversationId) {
-    console.log('Missing required data:', { hasProfile: !!profile, conversationId });
     return () => {};
   }
 

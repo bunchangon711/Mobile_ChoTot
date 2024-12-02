@@ -42,11 +42,11 @@ type PopulatedParticipant = {
   avatar?: { url: string };
 };
 
-type PopulatedUser = {
-  id: string;
-  name: string;
-  avatar?: { url: string };
-}
+// type PopulatedUser = {
+//   id: string;
+//   name: string;
+//   avatar?: { url: string };
+// }
 
 export const getOrCreateConversation: RequestHandler = async (req, res) => {
   const { peerId } = req.params;
@@ -78,60 +78,60 @@ export const getOrCreateConversation: RequestHandler = async (req, res) => {
   res.json({ conversationId: conversation._id });
 };
 
-export const sendChatMessage: RequestHandler = async (req, res) => {
-  const { conversationId } = req.params;
-  const { content } = req.body;
-  const imageFile = req.files?.image as File;
-  const typedUser = req.user as unknown as PopulatedUser;
+// export const sendChatMessage: RequestHandler = async (req, res) => {
+//   const { conversationId } = req.params;
+//   const { content } = req.body;
+//   const imageFile = req.files?.image as File;
+//   const typedUser = req.user as unknown as PopulatedUser;
 
-  if (!isValidObjectId(conversationId)) 
-    return sendErrorRes(res, "Invalid conversation id!", 422);
+//   if (!isValidObjectId(conversationId)) 
+//     return sendErrorRes(res, "Invalid conversation id!", 422);
 
-  try {
-    let imageUrl;
-    if (imageFile) {
-      const { url } = await uploadImage(imageFile.filepath);
-      imageUrl = url;
-    }
+//   try {
+//     let imageUrl;
+//     if (imageFile) {
+//       const { url } = await uploadImage(imageFile.filepath);
+//       imageUrl = url;
+//     }
 
-    const chatData = {
-      sentBy: req.user.id,
-      content: imageUrl ? undefined : content,
-      image: imageUrl,
-      timestamp: new Date(),
-      viewed: false
-    };
+//     const chatData = {
+//       sentBy: req.user.id,
+//       content: imageUrl ? undefined : content,
+//       image: imageUrl,
+//       timestamp: new Date(),
+//       viewed: false
+//     };
 
-    const updatedConversation = await ConversationModel.findByIdAndUpdate(
-      conversationId,
-      { $push: { chats: chatData } },
-      { new: true }
-    ).populate('chats.sentBy', 'name avatar.url');
+//     const updatedConversation = await ConversationModel.findByIdAndUpdate(
+//       conversationId,
+//       { $push: { chats: chatData } },
+//       { new: true }
+//     ).populate('chats.sentBy', 'name avatar.url');
 
-    if (!updatedConversation) 
-      return sendErrorRes(res, "Failed to update conversation", 500);
+//     if (!updatedConversation) 
+//       return sendErrorRes(res, "Failed to update conversation", 500);
 
-    const newMessage = updatedConversation.chats[updatedConversation.chats.length - 1];
+//     const newMessage = updatedConversation.chats[updatedConversation.chats.length - 1];
 
-    const messageData = {
-      id: newMessage._id.toString(),
-      text: imageUrl ? undefined : content,
-      time: newMessage.timestamp.toISOString(),
-      image: imageUrl,
-      viewed: false,
-      user: {
-        id: typedUser.id,
-        name: typedUser.name,
-        avatar: typedUser.avatar?.url
-      }
-    };
+//     const messageData = {
+//       id: newMessage._id.toString(),
+//       text: imageUrl ? undefined : content,
+//       time: newMessage.timestamp.toISOString(),
+//       image: imageUrl,
+//       viewed: false,
+//       user: {
+//         id: typedUser.id,
+//         name: typedUser.name,
+//         avatar: typedUser.avatar?.url
+//       }
+//     };
 
-    res.json({ message: messageData });
-  } catch (error) {
-    console.error('Send message error:', error);
-    return sendErrorRes(res, "Failed to send message", 500);
-  }
-};
+//     res.json({ message: messageData });
+//   } catch (error) {
+//     console.error('Send message error:', error);
+//     return sendErrorRes(res, "Failed to send message", 500);
+//   }
+// };
 
 
 export const deleteMessage: RequestHandler = async (req, res) => {

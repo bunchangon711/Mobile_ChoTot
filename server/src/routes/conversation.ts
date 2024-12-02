@@ -4,7 +4,7 @@ import {
   getLastChats,
   getOrCreateConversation,
   updateChatSeenStatus,
-  sendChatMessage,
+  // sendChatMessage,
   deleteMessage
 } from "src/controllers/conversation";
 import { isAuth } from "src/middleware/auth";
@@ -21,12 +21,12 @@ conversationRouter.patch(
   isAuth,
   updateChatSeenStatus
 );
-conversationRouter.post(
-  "/message/:conversationId",
-  isAuth,
-  fileParser,
-  sendChatMessage
-);
+// conversationRouter.post(
+//   "/message/:conversationId",
+//   isAuth,
+//   fileParser,
+//   sendChatMessage
+// );
 conversationRouter.delete("/message/:conversationId/:messageId", isAuth, deleteMessage);
 
 export default conversationRouter;
