@@ -15,7 +15,7 @@ const socket = io(baseURL, {
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
   timeout: 10000,
-  transports: ['websocket'],  // Try forcing websocket transport
+  transports: ['websocket'],  //Forcing websocket transport
 });
 
 type MessageProfile = {
@@ -98,9 +98,6 @@ export const handleSocketConnection = (
     
     socket.removeAllListeners();
     socket.connect();
-
-    // Remove this duplicate handler in handleSocketConnection
-    // socket.on("chat:message", handleMessage);
 
     socket.on("new_message", (data: NewMessageResponse) => {
       console.log('Received new message:', data); // Add debug log

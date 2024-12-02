@@ -210,7 +210,7 @@ export const getConversations: RequestHandler = async (req, res) => {
       text: c.content,
       time: c.timestamp.toISOString(),
       viewed: c.viewed,
-      image: c.image, // Add this line to include image URL
+      image: c.image, //include image URL
       user: {
         id: c.sentBy._id.toString(),
         name: c.sentBy.name,

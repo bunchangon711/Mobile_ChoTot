@@ -196,7 +196,6 @@ const ChatWindow: FC<Props> = ({ route }) => {
     const res = await runAxiosAsync<{ conversation: Conversation }>(
       authClient("/conversation/chats/" + conversationId)
     );
-    //console.log('Fetched conversation:', res?.conversation); // Add logging
     setFetchingChats(false);
 
     if (res?.conversation) {
@@ -235,23 +234,6 @@ const ChatWindow: FC<Props> = ({ route }) => {
       return () => socket.off("chat:message", updateSeenStatus);
     }, [])
   );
-
-  // useEffect(() => {
-  //   const messageHandler = (data: NewMessageResponse) => {
-  //     if (data.conversationId === conversationId && data.message?.id) {
-  //       dispatch(updateConversation({
-  //         conversationId: data.conversationId,
-  //         chat: data.message,
-  //         peerProfile: data.from
-  //       }));
-  //     }
-  //   };
-  
-  //   socket.on('new_message', messageHandler);
-  //   return () => {
-  //     socket.off('new_message', messageHandler);
-  //   };
-  // }, [conversationId]);
 
   if (!profile) return null;
 

@@ -27,10 +27,8 @@ const Chats: FC<Props> = (props) => {
   const dispatch = useDispatch();
 
   const onChatPress = (chat: ActiveChat) => {
-    // first we want to remove the unread chat counts
     dispatch(removeUnreadChatCount(chat.id));
 
-    // third we want to navigate our users to chat screen
     navigate("ChatWindow", {
       conversationId: chat.id,
       peerProfile: chat.peerProfile,
