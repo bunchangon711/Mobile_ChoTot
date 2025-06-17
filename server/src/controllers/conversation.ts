@@ -320,18 +320,6 @@ export const updateChatSeenStatus: RequestHandler = async (req, res) => {
     return sendErrorRes(res, "Invalid conversation or peer id!", 422);
 
   await updateSeenStatus(peerId, conversationId);
-  // await ConversationModel.findByIdAndUpdate(
-  //   conversationId,
-  //   {
-  //     $set: {
-  //       "chats.$[elem].viewed": true,
-  //     },
-  //   },
-  //   {
-  //     arrayFilters: [{ "elem.sentBy": peerId }],
-  //   }
-  // );
-
   res.json({ message: "Updated successfully." });
 };
  

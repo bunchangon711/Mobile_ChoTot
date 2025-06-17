@@ -9,9 +9,10 @@ import { updateChatViewed, updateConversation } from "app/store/conversation";
 import { io } from "socket.io-client";
 import * as Notifications from 'expo-notifications';
 
+//Socket.io client setup with configuration
 const socket = io(baseURL, { 
   path: "/socket-message", 
-  autoConnect: false,
+  autoConnect: false, // Manual connection control
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
   timeout: 10000,
@@ -53,10 +54,12 @@ export const handleSocketConnection = (
   let currentRoom = '';
   let reconnectAttempts = 0;
   
+   // Message handler for incoming messages
   const handleMessage = (data: NewMessageResponse) => {
     console.log(`Received message in room ${data.conversationId}`);
     if (!data.message || !data.from || !data.conversationId) return;
     
+    // Update Redux store with new message
     dispatch(updateConversation({
       conversationId: data.conversationId,
       chat: data.message,
@@ -87,20 +90,22 @@ export const handleSocketConnection = (
     }
   };
   
+  // Main connection setup function
   const setupConnection = () => {
-    console.log('Setting up socket connection with token:', !!profile.accessToken); // Add debug log
-    socket.auth = { token: profile.accessToken };
+    console.log('Setting up socket connection with token:', !!profile.accessToken);
+    socket.auth = { token: profile.accessToken }; //authentication token
     
     if (socket.connected) {
-      console.log('Socket already connected, disconnecting...'); // Add debug log
+      console.log('Socket already connected, disconnecting...');
       socket.disconnect();
     }
     
     socket.removeAllListeners();
     socket.connect();
 
+    // New message handler
     socket.on("new_message", (data: NewMessageResponse) => {
-      console.log('Received new message:', data); // Add debug log
+      console.log('Received new message:', data);
       handleMessage(data);
     });
 
@@ -108,6 +113,7 @@ export const handleSocketConnection = (
       dispatch(updateChatViewed(seenData));
     });
 
+    // Connection events handling
     socket.on("connect", () => {
       console.log('Socket connected successfully, joining room:', conversationId);
       reconnectAttempts = 0;
@@ -115,7 +121,7 @@ export const handleSocketConnection = (
       if (conversationId) {
         currentRoom = conversationId;
         socket.emit('join_room', conversationId, (response: { success: boolean }) => {
-          console.log('Join room response:', response); // Add debug log
+          console.log('Join room response:', response);
           if (response.success) {
             console.log(`Successfully joined room: ${conversationId}`);
           } else {
@@ -167,6 +173,7 @@ export const handleSocketConnection = (
     });
   };
 
+  // Initialize connection
   setupConnection();
 
   return () => {

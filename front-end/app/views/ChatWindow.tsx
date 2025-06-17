@@ -14,7 +14,7 @@ import {
   Conversation,
   addConversation,
   selectConversationById,
-  updateConversation,
+  // updateConversation,
   deleteMessage
 } from "app/store/conversation";
 import { FC, useCallback, useEffect, useState } from "react";
@@ -33,7 +33,7 @@ import * as Notifications from 'expo-notifications';
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-
+// Type definitions and helper functions
 type Props = NativeStackScreenProps<AppStackParamList, "ChatWindow">;
 
 type OutGoingMessage = {
@@ -57,6 +57,7 @@ const getTime = (value: IMessage["createdAt"]) => {
   return new Date(value).toISOString();
 };
 
+// Formats conversation data into GiftedChat compatible IMessage format
 const formatConversationToIMessage = (value?: Conversation): IMessage[] => {
   const formattedValues = value?.chats.map((chat) => ({
     _id: chat.id,
@@ -76,6 +77,7 @@ const formatConversationToIMessage = (value?: Conversation): IMessage[] => {
 };
 
 const ChatWindow: FC<Props> = ({ route }) => {
+  // State Management
   const { authState } = useAuth();
   const { conversationId, peerProfile } = route.params;
   const conversation = useSelector(selectConversationById(conversationId));
@@ -92,16 +94,30 @@ const ChatWindow: FC<Props> = ({ route }) => {
   useEffect(() => {
     if (!profile || !conversationId) return;
     
-    console.log('Setting up socket connection...'); // Add debug log
+    console.log('Setting up socket connection...'); 
     
-    const cleanup = handleSocketConnection(profile, dispatch, conversationId);
+    const cleanup = handleSocketConnection(profile, dispatch, conversationId);  // Socket connection setup
     
     return () => {
-      console.log('Cleaning up socket connection...'); // Add debug log
+      console.log('Cleaning up socket connection...');
       cleanup();
     };
   }, [profile, conversationId]);
 
+  //Fetches previous chat history from server
+  const fetchOldChats = async () => {
+    setFetchingChats(true);
+    const res = await runAxiosAsync<{ conversation: Conversation }>(
+      authClient("/conversation/chats/" + conversationId)
+    );
+    setFetchingChats(false);
+
+    if (res?.conversation) {
+      dispatch(addConversation([res.conversation]));
+    }
+  };
+
+  // Push Notification Handler
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
       const notificationData = response.notification.request.content.data;
@@ -116,6 +132,7 @@ const ChatWindow: FC<Props> = ({ route }) => {
     return () => subscription.remove();
   }, []);
 
+  // Message Sending Functions
   const handleOnMessageSend = async (messages: IMessage[]) => {
     if (!profile) return;
     const currentMessage = messages[0];
@@ -140,6 +157,7 @@ const ChatWindow: FC<Props> = ({ route }) => {
     });
   };  
 
+  // Handles image selection and sending through socket
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -169,6 +187,7 @@ const ChatWindow: FC<Props> = ({ route }) => {
     }
   };
 
+  //Call delete API in backend and update redux store
   const handleLongPress = useCallback((_context: any, message: IMessage) => {
     if (message.user._id === profile?.id) {
       Alert.alert(
@@ -191,18 +210,7 @@ const ChatWindow: FC<Props> = ({ route }) => {
     }
   }, [profile, conversationId]);
 
-  const fetchOldChats = async () => {
-    setFetchingChats(true);
-    const res = await runAxiosAsync<{ conversation: Conversation }>(
-      authClient("/conversation/chats/" + conversationId)
-    );
-    setFetchingChats(false);
-
-    if (res?.conversation) {
-      dispatch(addConversation([res.conversation]));
-    }
-  };
-
+    // Updates message read status
   const sendSeenRequest = () => {
     runAxiosAsync(
       authClient.patch(`/conversation/seen/${conversationId}/${peerProfile.id}`)
@@ -212,10 +220,9 @@ const ChatWindow: FC<Props> = ({ route }) => {
   useEffect(() => {
     const handleApiRequest = async () => {
       await fetchOldChats();
-      // we want to update viewed property inside our database
+      //TODO: update viewed property inside database
       await sendSeenRequest();
     };
-
     handleApiRequest();
   }, []);
 
